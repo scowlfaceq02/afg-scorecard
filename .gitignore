@@ -1,0 +1,7 @@
+__pycache__/ 
+*.pyc 
+afg_scorecard.db 
+~$* 
+data/*.csv 
+data/*.md 
+data/*.xlsx 
