@@ -385,6 +385,26 @@ def build_website(resolved, m, out_dir):
 
 def main():
     os.makedirs(DOCX_DIR, exist_ok=True)
+
+    # INTEGRITY CHECK — print DB state before building anything.
+    # Every "Resolved" call here must correspond to an actual Kalshi settlement.
+    # If you see resolved calls and have NOT run 05_update_scorecard.py against
+    # live Kalshi data first, STOP and run it now before proceeding.
+    with get_conn() as conn:
+        n_open = conn.execute("SELECT COUNT(*) FROM predictions WHERE status='Open'").fetchone()[0]
+        n_resolved = conn.execute("SELECT COUNT(*) FROM predictions WHERE status='Resolved'").fetchone()[0]
+        n_total = n_open + n_resolved
+    print(f"=== SCORECARD INTEGRITY CHECK ===")
+    print(f"  Total logged predictions : {n_total}")
+    print(f"  Open (unresolved)        : {n_open}")
+    print(f"  Resolved (will publish)  : {n_resolved}")
+    if n_resolved > 0:
+        print(f"  WARNING: {n_resolved} resolved calls will appear in the scorecard.")
+        print(f"  Confirm each resolved call settled on Kalshi before publishing.")
+    else:
+        print(f"  Scorecard will show: No resolved predictions yet.")
+    print(f"=================================")
+
     resolved = load_resolved()
     m = compute_metrics(resolved)
 
