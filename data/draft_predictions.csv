@@ -1,0 +1,26 @@
+market,category,kalshi_ticker,report_date,kalshi_price,afg_probability,conviction,recommendation,contract_close_date
+"Will A New Episode of Stranger Things be released Worldwide before Jan 1, 2027?",Culture,KXMEDIARELEASEST-27JAN01,2026-07-20,0.07,,,,2027-01-01
+"WIll GTA6 be released by Jul 31, 2026?",Culture,GTA6-26JUL31,2026-07-20,0.01,,,,2026-08-01
+"WIll GTA6 be released by Dec 31, 2026?",Culture,GTA6-26DEC31,2026-07-20,0.89,,,,2027-01-01
+Who Will Be on the Cover of NBA 2K27?,Culture,KXNBA2KCOVER-27-JAL,2026-07-20,0.11,,,,2027-01-01
+Will The Odyssey win Best Picture at the Oscars?,Culture,KXOSCARPIC-27-ODY,2026-07-20,0.48,,,,2027-12-31
+More tech layoffs in 2026 than in 2025?,Economics,KXLAYOFFSYINFO-26-494000,2026-07-20,0.913,,,,2027-03-01
+"Will the number of unemployment rate exceeds 10% (monthly BLS); S&P 500 declines more than 30% from its closing level on Issuance; Zillow Home Value Index declines more than 10% YoY in any of: NYC, LA, San Francisco, Chicago, Houston, Phoenix; labor share of gross domestic income (GDI) first-release value for any quarter falls below 50%; CPI-U (All items, not seasonally-adjusted) YoY falls below 0% in any monthly release during before July 2028 be above 2?",Economics,KXCITRINI-28JUL01,2026-07-20,0.21,,,,2028-07-01
+Will the Federal Reserve Hike rates by 0bps at their July 2026 meeting?,Economics,KXFEDDECISION-26JUL-H0,2026-07-20,0.94,,,,2026-07-29
+Will the Federal Reserve Hike rates by 25bps at their July 2026 meeting?,Economics,KXFEDDECISION-26JUL-H25,2026-07-20,0.07,,,,2026-07-29
+Will the Federal Reserve Cut rates by 25bps at their July 2026 meeting?,Economics,KXFEDDECISION-26JUL-C25,2026-07-20,0.01,,,,2026-07-29
+"Will ""SAVE Act"" (H.R. 22) becomes law before Jan 4, 2027?",Politics,KXSAVEACT-27-JAN04,2026-07-20,0.076,,,,2027-01-04
+Donald Trump out before 2027?,Politics,KXTRUMPOUT27-27-DJT,2026-07-20,0.058,,,,2027-01-01
+"Will the 7-day moving average of transit calls through the Strait of Hormuz as reported by the IMF PortWatch be above 60 before August 1, 2026?",Politics,KXHORMUZNORM-26MAR17-B260801,2026-07-20,0.01,,,,2026-08-01
+"Will Donald Trump leave office before August 1, 2026?",Politics,KXTRUMPOUT27-27-26AUG01,2026-07-20,0.002,,,,2026-08-01
+Will Trump buy Greenland?,Politics,KXGREENLAND-29,2026-07-20,0.19,,,,2029-01-20
+Will Los Angeles R win the 2027 Pro Football Championship?,Sports,KXSB-27-LAR,2026-07-20,0.16,,,,2029-02-13
+Will Denver win the 2027 Pro Football Championship?,Sports,KXSB-27-DEN,2026-07-20,0.05,,,,2029-02-13
+Will LeBron James announce his retirement in 2026?,Sports,KXLBJRETIRE-26,2026-07-20,0.03,,,,2026-10-31
+Will Seattle win the 2027 Pro Football Championship?,Sports,KXSB-27-SEA,2026-07-20,0.08,,,,2029-02-13
+Will Dallas win the 2027 Pro Football Championship?,Sports,KXSB-27-DAL,2026-07-20,0.04,,,,2029-02-13
+Will there be an at least 8 magnitude earthquake in California before 2027?,Weather,KXEARTHQUAKECALIFORNIA-27,2026-07-20,0.07,,,,2027-01-01
+"Will the **high temp in LA** be >80° on Jul 20, 2026?",Weather,KXHIGHLAX-26JUL20-T80,2026-07-20,1.0,,,,2026-07-21
+Will 2026 be the hottest year on record?,Weather,KXGTEMP-26-P0,2026-07-20,0.334,,,,2027-01-01
+"Will Missouri have a maximum drought category of at least D4 during June 4–July 30, 2026?",Weather,KXDROUGHTLEVEL-26JULLD4-MO,2026-07-20,0.08,,,,2026-07-31
+Rain in Los Angeles in Jul 2026?,Weather,KXRAINLAXM-26JUL-1,2026-07-20,0.02,,,,2026-08-01

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AFG Performance Scorecard</title>
+<style>
+  :root { --navy:#17365D; --blue:#365F91; --green:#1F6F3D; --red:#A6231F; --line:#E2E8F0; }
+  * { box-sizing: border-box; }
+  body { font-family: Georgia, 'Cambria', serif; max-width: 960px; margin: 0 auto; padding: 32px 20px;
+         color: #1a202c; background: #fff; line-height: 1.5; }
+  header { text-align: center; border-bottom: 3px solid var(--navy); padding-bottom: 16px; margin-bottom: 8px; }
+  h1 { color: var(--navy); margin: 0; font-size: 2.1em; }
+  .subtitle { color: var(--blue); font-weight: bold; margin-top: 6px; }
+  .updated { color: #888; font-size: 0.85em; margin-top: 4px; }
+  h2 { color: var(--blue); border-bottom: 1px solid var(--blue); padding-bottom: 4px; margin-top: 36px; }
+  .hero { display: flex; gap: 16px; margin: 28px 0 8px; flex-wrap: wrap; }
+  .metric { flex: 1; min-width: 160px; border: 1px solid var(--line); border-radius: 10px;
+             padding: 20px; text-align: center; background: #F8FAFC; }
+  .metric-label { font-size: 0.85em; color: #666; text-transform: uppercase; letter-spacing: 0.05em; }
+  .metric-value { font-size: 2.4em; font-weight: bold; color: var(--navy); margin: 6px 0; }
+  .metric-sub { font-size: 0.8em; color: #999; }
+  .delta { font-size: 1.2em; font-weight: bold; text-align: center; margin: 8px 0 0; }
+  table { border-collapse: collapse; width: 100%; margin-top: 12px; font-size: 0.95em; }
+  th { background: #DCE6F1; text-align: left; padding: 10px; border: 1px solid #CBD5E0; color: var(--navy); }
+  td { padding: 10px; border: 1px solid #E2E8F0; }
+  tbody tr:nth-child(even) { background: #F8FAFC; }
+  .good { color: var(--green); font-weight: bold; }
+  .bad { color: var(--red); font-weight: bold; }
+  .muted { color: #888; }
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line);
+            color: #888; font-size: 0.85em; text-align: center; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Axiom Forecasting Group</h1>
+    <div class="subtitle">Performance Scorecard</div>
+    <div class="updated">Last updated July 21, 2026</div>
+  </header>
+  <p class='muted'>No resolved predictions yet. The scorecard populates as markets settle.</p>
+  <footer>
+    Brier score measures forecast accuracy: 0 = perfect, 0.25 = coin flip, 1.0 = perfectly wrong.
+    AFG publishes calibrated probability estimates on Kalshi prediction markets every Monday, Wednesday, and Friday.<br>
+    This is research, not financial advice.
+  </footer>
+</body>
+</html>
