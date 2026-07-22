@@ -1,26 +1,26 @@
 market,category,kalshi_ticker,report_date,kalshi_price,afg_probability,conviction,recommendation,contract_close_date
-LeBron James Next Team — Cleveland Cavaliers,Sports,KXNEXTTEAMNBA-26LJAM-CLE,7/21/2026,0.38,0.28,HIGH,BUY NO,10/1/2026
-2027 Pro Football Champion — Los Angeles Rams,Sports,KXSB-27-LAR,7/21/2026,0.16,0.13,MEDIUM,BUY NO,2/14/2027
-Pro Baseball Champion — Los Angeles Dodgers,Sports,KXMLB-26-LAD,7/21/2026,0.33,0.26,HIGH,BUY NO,11/1/2026
-3M Open Winner — Scottie Scheffler,Sports,KXPGATOUR-3MO26-SCH,7/21/2026,0.26,0.19,HIGH,BUY NO,7/27/2026
-2027 Pro Basketball Champion — Oklahoma City Thunder,Sports,KXNBA-27-OKC,7/21/2026,0.22,0.19,MEDIUM,BUY NO,6/30/2027
-More tech layoffs in 2026 than in 2025?,Economics,KXLAYOFFSYINFO-26,7/21/2026,0.89,0.88,SPECULATIVE,NO TRADE,3/1/2027
-Fed decision in July — Maintains rate,Economics,KXFEDDECISION-26JUL-H0,7/21/2026,0.86,0.93,HIGH,BUY YES,7/29/2026
-Will the Citrini scenario happen?,Economics,KXCITRINI-28JUL01,7/21/2026,0.21,0.15,HIGH,BUY NO,7/1/2028
-Number of rate cuts in 2026 — Exactly 0,Economics,KXRATECUTCOUNT-26DEC31,7/21/2026,0.83,0.86,MEDIUM,BUY YES,12/31/2026
-Next Fed rate hike — Before 2027,Economics,KXFEDHIKE-B2027,7/21/2026,0.62,0.45,HIGH,BUY NO,1/1/2027
-Hormuz traffic normal before Jan 1 2027?,Politics,KXHORMUZNORM-26MAR17,7/21/2026,0.45,0.08,HIGH,BUY NO,1/1/2027
-U.S. confirms aliens exist before Jan 20 2029?,Politics,KXALIENS-27,7/21/2026,0.23,0.07,HIGH,BUY NO,1/20/2029
-US-Iran nuclear deal before Jan 1 2028?,Politics,KXUSAIRANAGREEMENT-27,7/21/2026,0.42,0.12,HIGH,BUY NO,1/1/2028
-Trump next Attorney General — Todd Blanche,Politics,KXNEXTAG-29,7/21/2026,0.88,0.82,SPECULATIVE,NO TRADE,1/20/2029
-Will the SAVE Act become law?,Politics,KXSAVEACT-27,7/21/2026,0.08,0.07,MEDIUM,BUY NO,1/4/2027
-GTA VI release before 2027?,Culture,KXGTA6,7/21/2026,0.89,0.82,MEDIUM,BUY NO,1/1/2027
-Stranger Things new episode this year?,Culture,KXMEDIARELEASEST-27JAN01,7/21/2026,0.06,0.05,SPECULATIVE,NO TRADE,1/1/2027
-Oscar Best Picture — The Odyssey,Culture,KXOSCARPIC-27,7/21/2026,0.49,0.37,HIGH,BUY NO,3/15/2027
-Game Awards 2026 GOTY — Grand Theft Auto VI,Culture,KXGAMEAWARDS-2026,7/21/2026,0.67,0.54,HIGH,BUY NO,12/15/2026
-Next James Bond — Callum Turner,Culture,KXBOND-30,7/21/2026,0.39,0.3,MEDIUM,BUY NO,1/1/2030
-Highest temp in NYC today 81-82°,Weather,KXHIGHNY-26JUL21,7/21/2026,0.99,0.99,SPECULATIVE,NO TRADE,7/21/2026
-Highest temp in LA today 81° or above,Weather,KXHIGHLAX-26JUL21,7/21/2026,0.99,0.99,SPECULATIVE,NO TRADE,7/21/2026
-CA 8.0+ earthquake before 2027?,Weather,KXEARTHQUAKECALIFORNIA-27,7/21/2026,0.08,0.02,HIGH,BUY NO,1/1/2027
-Exceptional drought — Oregon,Weather,KXDROUGHTLEVEL-26JULLD4-OR,7/21/2026,0.43,0.38,MEDIUM,BUY NO,7/30/2026
-First Eastern Pacific hurricane — Fausto,Weather,KXFIRSTHURRICANE-26DEC01EPAC,7/21/2026,0.99,0.99,SPECULATIVE,NO TRADE,12/1/2026
+LeBron James Next Team — Miami Heat,Sports,KXNEXTTEAMNBA-26LJAM-MIA,7/22/2026,0.48,0.55,MEDIUM,BUY YES,10/1/2026
+2027 Pro Football Champion — Los Angeles Rams,Sports,KXSB-27-LAR,7/22/2026,0.16,0.13,MEDIUM,BUY NO,2/14/2027
+Pro Baseball Champion — Los Angeles Dodgers,Sports,KXMLB-26-LAD,7/22/2026,0.31,0.25,HIGH,BUY NO,11/1/2026
+3M Open Winner — Scottie Scheffler,Sports,KXPGATOUR-3MO26-SCH,7/22/2026,0.26,0.19,HIGH,BUY NO,7/27/2026
+2027 Pro Basketball Champion — Oklahoma City Thunder,Sports,KXNBA-27-OKC,7/22/2026,0.21,0.18,MEDIUM,BUY NO,6/30/2027
+Fed decision in July — Maintains rate,Economics,KXFEDDECISION-26JUL-H0,7/22/2026,0.76,0.82,MEDIUM,BUY YES,7/29/2026
+More tech layoffs in 2026 than in 2025?,Economics,KXLAYOFFSYINFO-26,7/22/2026,0.88,0.88,SPECULATIVE,NO TRADE,3/1/2027
+Will the Citrini scenario happen?,Economics,KXCITRINI-28JUL01,7/22/2026,0.2,0.15,HIGH,BUY NO,7/1/2028
+Number of rate cuts in 2026 — Exactly 0,Economics,KXRATECUTCOUNT-26DEC31,7/22/2026,0.8,0.85,MEDIUM,BUY YES,12/31/2026
+Next Fed rate hike — Before 2027,Economics,KXFEDHIKE-B2027,7/22/2026,0.64,0.52,HIGH,BUY NO,1/1/2027
+Hormuz traffic normal before Jan 1 2027?,Politics,KXHORMUZNORM-26MAR17,7/22/2026,0.43,0.08,HIGH,BUY NO,1/1/2027
+U.S. confirms aliens exist before Jan 20 2029?,Politics,KXALIENS-27,7/22/2026,0.24,0.07,HIGH,BUY NO,1/20/2029
+US-Iran nuclear deal before Jan 20 2029?,Politics,KXUSAIRANAGREEMENT-27,7/22/2026,0.57,0.2,HIGH,BUY NO,1/20/2029
+Trump next Attorney General — Todd Blanche,Politics,KXNEXTAG-29,7/22/2026,0.9,0.85,SPECULATIVE,NO TRADE,1/20/2029
+Will the SAVE Act become law?,Politics,KXSAVEACT-27,7/22/2026,0.08,0.07,MEDIUM,BUY NO,1/4/2027
+GTA VI release before 2027?,Culture,KXGTA6,7/22/2026,0.88,0.82,MEDIUM,BUY NO,1/1/2027
+Stranger Things new episode this year?,Culture,KXMEDIARELEASEST-27JAN01,7/22/2026,0.06,0.05,SPECULATIVE,NO TRADE,1/1/2027
+Oscar Best Picture — The Odyssey,Culture,KXOSCARPIC-27,7/22/2026,0.5,0.37,HIGH,BUY NO,3/15/2027
+Game Awards 2026 GOTY — Grand Theft Auto VI,Culture,KXGAMEAWARDS-2026,7/22/2026,0.66,0.54,HIGH,BUY NO,12/15/2026
+Next James Bond — Callum Turner,Culture,KXBOND-30,7/22/2026,0.4,0.3,MEDIUM,BUY NO,1/1/2030
+CA 8.0+ earthquake before 2027?,Weather,KXEARTHQUAKECALIFORNIA-27,7/22/2026,0.07,0.02,HIGH,BUY NO,1/1/2027
+Hurricane Bertha — Category 1 or above,Weather,KXHURCAT-26BERTHA,7/22/2026,0.06,0.06,SPECULATIVE,NO TRADE,12/1/2026
+First Atlantic hurricane — Cristobal,Weather,KXFIRSTHURRICANE-26DEC01ATL,7/22/2026,0.41,0.41,SPECULATIVE,NO TRADE,12/1/2026
+Exceptional drought — Oregon,Weather,KXDROUGHTLEVEL-26JULLD4-OR,7/22/2026,0.37,0.34,MEDIUM,BUY NO,7/30/2026
+Highest temp in LA today 79-80°,Weather,KXHIGHLAX-26JUL22,7/22/2026,0.46,0.46,SPECULATIVE,NO TRADE,7/22/2026
