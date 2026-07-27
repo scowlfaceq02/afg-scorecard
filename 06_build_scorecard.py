@@ -41,11 +41,48 @@ WEB_DIR        = "docs"
 # ── data ─────────────────────────────────────────────────────────────────────
 
 def load_resolved():
+    """
+    Loads resolved predictions, applying the FIRST-CALL-ONLY rule:
+    when the same market (same kalshi_ticker) was published across multiple
+    report cycles, only AFG's earliest forecast counts toward the published
+    Forecast Accuracy Index. This is the hardest test — it scores the call
+    made at the point of maximum uncertainty, not one refined as evidence
+    accumulated.
+
+    Later republished calls on the same ticker remain in the database for
+    internal reference but are excluded from all scorecard metrics.
+    """
     with get_conn() as conn:
         rows = [dict(r) for r in conn.execute(
             "SELECT * FROM predictions WHERE status='Resolved' ORDER BY contract_close_date DESC"
         ).fetchall()]
-    return rows
+
+    # Keep only the earliest report_date per ticker (fall back to market name
+    # if a ticker is missing, so untickered legacy rows still dedupe sensibly).
+    first_calls = {}
+    duplicates_dropped = 0
+    for r in rows:
+        key = r.get("kalshi_ticker") or r.get("market")
+        existing = first_calls.get(key)
+        if existing is None:
+            first_calls[key] = r
+        else:
+            duplicates_dropped += 1
+            # keep whichever has the earlier report_date
+            if str(r.get("report_date") or "") < str(existing.get("report_date") or ""):
+                first_calls[key] = r
+
+    deduped = sorted(
+        first_calls.values(),
+        key=lambda x: str(x.get("contract_close_date") or ""),
+        reverse=True,
+    )
+
+    if duplicates_dropped:
+        print(f"  Deduplication: {duplicates_dropped} repeat forecast(s) excluded "
+              f"(first-call-only rule). {len(deduped)} unique market(s) scored.")
+
+    return deduped
 
 
 def call_correct(r):
