@@ -34,7 +34,7 @@ RED_FILL    = "FDECEA"
 FONT        = "Cambria"
 
 CATEGORY_ORDER = ["Sports", "Economics", "Politics", "Culture", "Weather"]
-DOCX_DIR       = "reports"
+DOCX_DIR       = "reports/scorecards"
 WEB_DIR        = "docs"
 
 
@@ -307,37 +307,48 @@ def build_docx(resolved, m, out_path):
     # ── Recent resolved calls ────────────────────────────────────────────────
     if resolved:
         _heading(doc, "Recent Resolved Forecasts")
-        rec_t = doc.add_table(rows=1, cols=6)
-        r_headers = ["Market", "Category", "Kalshi", "AFG", "Outcome", "Result"]
+
+        # Column layout (DXA, must sum to 10800 — fits portrait text column):
+        # Market | Category | Kalshi | AFG Prob | AFG Call | Outcome | Result
+        r_headers  = ["Market", "Category", "Kalshi", "AFG", "AFG Call", "Outcome", "Result"]
+        col_widths = [3500, 1300, 800, 800, 1300, 1000, 2100]  # sum = 10800
+
+        rec_t = doc.add_table(rows=1, cols=len(r_headers))
         for i, h in enumerate(r_headers):
             c = rec_t.rows[0].cells[i]; c.text = ""
             cp = c.paragraphs[0]
-            cp.paragraph_format.space_before = Pt(4); cp.paragraph_format.space_after = Pt(4)
+            cp.paragraph_format.space_before = Pt(4)
+            cp.paragraph_format.space_after  = Pt(4)
             _run(cp, h, size=9.5, bold=True, color=NAVY)
             _shade(c, HEADER_FILL); _borders(c)
 
         for r in resolved[:15]:
-            hit = call_correct(r)
-            row = rec_t.add_row()
-            result_text  = "✓ Correct"   if hit else "✗ Incorrect"
-            result_color = GREEN         if hit else RED
-            outcome_txt  = "YES"         if r["outcome"] == 1 else "NO"
-            vals = [
-                r["market"][:48],
-                r["category"],
-                f"{r['kalshi_price']:.0%}",
-                f"{r['afg_probability']:.0%}",
-                outcome_txt,
-                result_text,
+            hit          = call_correct(r)
+            rec_row      = rec_t.add_row()
+            result_text  = "✓ Correct"  if hit else "✗ Incorrect"
+            result_color = GREEN        if hit else RED
+            outcome_txt  = "YES"        if r["outcome"] == 1 else "NO"
+            afg_call     = r["recommendation"]   # "BUY YES" or "BUY NO"
+            call_color   = GREEN if afg_call == "BUY YES" else RED
+
+            row_vals = [
+                (r["market"][:44],          NAVY,         False),
+                (r["category"],             GRAY,         False),
+                (f"{r['kalshi_price']:.0%}", GRAY,        False),
+                (f"{r['afg_probability']:.0%}", NAVY,     False),
+                (afg_call,                  call_color,   True),
+                (outcome_txt,               GRAY,         False),
+                (result_text,               result_color, True),
             ]
-            cell_colors = [NAVY, GRAY, GRAY, NAVY, GRAY, result_color]
-            for i, (val, col) in enumerate(zip(vals, cell_colors)):
-                c = row.cells[i]; c.text = ""
+            for i, (val, col, bold) in enumerate(row_vals):
+                c = rec_row.cells[i]; c.text = ""
                 cp = c.paragraphs[0]
-                cp.paragraph_format.space_before = Pt(3); cp.paragraph_format.space_after = Pt(3)
-                _run(cp, val, size=9, bold=(i == 5), color=col)
+                cp.paragraph_format.space_before = Pt(3)
+                cp.paragraph_format.space_after  = Pt(3)
+                _run(cp, val, size=9, bold=bold, color=col)
                 _borders(c)
-        _set_widths(rec_t, [4400, 1300, 900, 900, 900, 1400])
+
+        _set_widths(rec_t, col_widths)
 
     # footnote
     p_fn = doc.add_paragraph()
