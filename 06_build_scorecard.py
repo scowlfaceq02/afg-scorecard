@@ -101,8 +101,8 @@ def compute_metrics(resolved):
     correct_list = [r for r in resolved if call_correct(r) is True]
     incorrect_list = [r for r in resolved if call_correct(r) is False]
 
-    afg_brier    = sum(r["brier_score"] for r in resolved) / n
-    kalshi_brier = sum(r["kalshi_brier_score"] for r in resolved) / n
+    afg_brier    = sum(r["brier_score"] or 0 for r in resolved) / n
+    kalshi_brier = sum(r["kalshi_brier_score"] or 0 for r in resolved) / n
 
     by_cat = {}
     for cat in CATEGORY_ORDER:
@@ -116,7 +116,7 @@ def compute_metrics(resolved):
             "correct":  len(c),
             "incorrect": len(ic),
             "accuracy": len(c) / len(subset) if subset else None,
-            "afg_brier": sum(r["brier_score"] for r in subset) / len(subset),
+            "afg_brier": sum(r["brier_score"] or 0 for r in subset) / len(subset),
         }
 
     return {
