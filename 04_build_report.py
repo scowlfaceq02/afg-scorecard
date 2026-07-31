@@ -4,7 +4,8 @@
 
   - reports/AFG_Research_Report_<date>.docx  (locked institutional template)
   - data/final_report.xlsx                    (raw data backup)
-  - reports/AFG_Intelligence_Brief_<date>_Substack.md  (public-facing brief)
+  - reports/AFG_Substack_Post_<date>.md   (free teaser: summary + top 3, no edges)
+  - reports/AFG_Twitter_Post_<date>.txt   (top call + edge score + rationale)
 
 This script refuses to run if either approved file is missing -- that's the
 checkpoint gate. Nothing before this point is allowed to skip your review.
@@ -408,7 +409,6 @@ def build_docx(df, sections, contrarian_rows, report_date, output_path):
     add_dashboard_table(doc, [
         ("Markets screened", sections.get("Markets Screened", "25 (5 categories × 5)")),
         ("Markets excluded for data quality", 25 - n_published),
-        ("Markets published", n_published),
         ("Markets with actionable edge (≥ 3pp)", n_actionable),
         ("HIGH conviction calls", n_high),
     ])
@@ -523,43 +523,87 @@ def build_xlsx(df, output_path, raw_markets_path="data/raw_markets.xlsx"):
         vv.column_dimensions["D"].width = 32
 
 
-def build_substack_brief(df, sections, report_date, output_path):
+def build_substack_post(df, sections, report_date, output_path):
+    """
+    Free Substack teaser. Deliberately withholds the analytical product:
+      - thought-provoking title
+      - Executive Summary
+      - TOP 3 CALLS, market name + direction ONLY (no edge score, no rationale)
+    Edge scores, conviction tiers and reasoning stay in the paid report.
+    """
+    top3 = df.head(3)
+    lead = top3.iloc[0]
+
+    # Title is authored per cycle in the narrative under "## Substack Title".
+    title = (sections.get("Substack Title") or "").strip()
+    if not title:
+        direction = "Overpricing" if lead["edge_score"] < 0 else "Underpricing"
+        subject = lead["market"].split("—")[0].strip().rstrip("?")
+        title = f"The Market Is {direction} {subject}"
+
     lines = [
-        f"# AFG Intelligence Brief — {report_date}",
+        f"# {title}",
         "",
-        "*Where the crowd is wrong, and why.*",
+        f"*AFG Intelligence Brief — {report_date}*",
         "",
         "---",
         "",
         sections.get("Executive Summary", ""),
         "",
+        "## Today's Top 3 Calls",
+        "",
     ]
 
-    top = df.iloc[0]
-    lines.append(f"## The big one: {top['market']}")
-    lines.append("")
-    lines.append(
-        f"Kalshi has this at **{top['kalshi_price']:.0%}**. We're at **{top['afg_probability']:.0%}** "
-        f"— a {abs(top['edge_score']*100):.0f}-point gap, our highest-conviction call today. "
-        f"{top['recommendation']}."
-    )
-    lines.append("")
+    for i, (_, r) in enumerate(top3.iterrows(), start=1):
+        lines.append(f"**{i}. {r['market']}** — {r['recommendation']}")
+        lines.append("")
 
-    for category in CATEGORY_ORDER:
-        if category in sections and sections[category]:
-            lines.append(f"## {category}")
-            lines.append("")
-            lines.append(sections[category])
-            lines.append("")
-
-    lines.append("---")
-    lines.append("")
-    lines.append("*As always: this is research, not financial advice. Trade your own book.*")
-    lines.append("")
-    lines.append("— AFG Research")
+    lines += [
+        "---",
+        "",
+        "Edge scores, conviction tiers, full reasoning and the complete "
+        "10-market conviction table are available to paid subscribers.",
+        "",
+        "Every AFG call is logged and scored against the market's own implied "
+        "probability. Track the record here: "
+        "**[AFG Forecast Accuracy Index](https://scowlfaceq02.github.io/afg-scorecard/)**",
+        "",
+        "*Research, not financial advice. Trade your own book.*",
+        "",
+        "— AFG Research",
+    ]
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
+
+
+def build_twitter_post(df, report_date, output_path):
+    """
+    Single top call, WITH edge score and a one-sentence rationale.
+    Written to be pasted straight into X/Twitter.
+    """
+    top = df.iloc[0]
+    edge_pp = top["edge_score"] * 100
+    direction = "overpricing" if edge_pp < 0 else "underpricing"
+
+    post = (
+        f"AFG call — {top['market']}\n\n"
+        f"Kalshi: {top['kalshi_price']:.0%}  |  AFG: {top['afg_probability']:.0%}  "
+        f"|  Edge: {edge_pp:+.0f}pp\n\n"
+        f"{top['recommendation']} — the market is {direction} this by "
+        f"{abs(edge_pp):.0f} points on our read.\n\n"
+        f"Track record: https://scowlfaceq02.github.io/afg-scorecard/\n\n"
+        f"#PredictionMarkets #Kalshi"
+    )
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(f"AFG TWITTER POST — {report_date}\n")
+        f.write("=" * 60 + "\n")
+        f.write("Paste the block below directly into X/Twitter.\n")
+        f.write("=" * 60 + "\n\n")
+        f.write(post)
+        f.write("\n\n" + "=" * 60 + "\n")
+        f.write(f"Character count: {len(post)}\n")
 
 
 def main():
@@ -572,15 +616,18 @@ def main():
     file_date = date.today().isoformat()
 
     docx_path = f"{REPORTS_DIR}/AFG_Research_Report_{file_date}.docx"
-    brief_path = f"{REPORTS_DIR}/AFG_Intelligence_Brief_{file_date}_Substack.md"
+    post_path    = f"{REPORTS_DIR}/AFG_Substack_Post_{file_date}.md"
+    twitter_path = f"{REPORTS_DIR}/AFG_Twitter_Post_{file_date}.txt"
 
     build_docx(df, sections, contrarian_rows, report_date, docx_path)
     build_xlsx(df, XLSX_OUTPUT_PATH)
-    build_substack_brief(df, sections, report_date, brief_path)
+    build_substack_post(df, sections, report_date, post_path)
+    build_twitter_post(df, report_date, twitter_path)
 
     print(f"Wrote {docx_path}")
     print(f"Wrote {XLSX_OUTPUT_PATH}")
-    print(f"Wrote {brief_path}")
+    print(f"Wrote {post_path}")
+    print(f"Wrote {twitter_path}")
 
 
 if __name__ == "__main__":

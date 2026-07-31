@@ -680,6 +680,54 @@ def build_website(resolved, m, out_dir):
 
 # ── main ─────────────────────────────────────────────────────────────────────
 
+def build_resolution_post(resolved, m, out_path):
+    """
+    Social post announcing the most recent resolution(s), for pairing with a
+    screenshot of the Forecast Accuracy Index. Written to be pasted directly.
+    """
+    if not resolved or m is None:
+        return None
+
+    # "Latest" = most recently SETTLED, i.e. the largest close date that has
+    # already passed. Sorting purely by close_date would surface a market whose
+    # nominal close date is still in the future but which resolved early.
+    today = date.today().isoformat()
+    settled = [r for r in resolved if str(r.get("contract_close_date") or "") <= today]
+    latest = (sorted(settled, key=lambda r: str(r.get("contract_close_date") or ""))[-1]
+              if settled else resolved[0])
+    hit    = call_correct(latest)
+    verdict = "Correct." if hit else "Wrong."
+    outcome = "YES" if latest["outcome"] == 1 else "NO"
+
+    beat = m["skill_delta"] > 0
+    standing = (
+        f"AFG {'leads' if beat else 'trails'} the market "
+        f"{m['afg_brier']:.3f} to {m['kalshi_brier']:.3f} on Brier score "
+        f"across {m['n']} resolved forecast{'s' if m['n'] != 1 else ''}."
+    )
+
+    post = (
+        f"RESOLVED — {latest['market']}\n\n"
+        f"Kalshi had it at {latest['kalshi_price']:.0%}. "
+        f"AFG said {latest['afg_probability']:.0%} and called {latest['recommendation']}.\n"
+        f"Settled {outcome}. {verdict}\n\n"
+        f"Record: {m['correct']}-{m['incorrect']} ({m['accuracy']:.0%}). {standing}\n\n"
+        f"Full index: https://scowlfaceq02.github.io/afg-scorecard/\n\n"
+        f"#PredictionMarkets #Kalshi"
+    )
+
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(f"AFG RESOLUTION POST — {date.today().strftime('%B %d, %Y')}\n")
+        f.write("=" * 60 + "\n")
+        f.write("Paste below into X/Twitter. Attach a screenshot of the\n")
+        f.write("Forecast Accuracy Index dashboard.\n")
+        f.write("=" * 60 + "\n\n")
+        f.write(post)
+        f.write("\n\n" + "=" * 60 + "\n")
+        f.write(f"Character count: {len(post)}\n")
+    return out_path
+
+
 def main():
     os.makedirs(DOCX_DIR, exist_ok=True)
 
@@ -704,9 +752,13 @@ def main():
     docx_path = f"{DOCX_DIR}/AFG_Scorecard_{date.today().isoformat()}.docx"
     build_docx(resolved, m, docx_path)
     build_website(resolved, m, WEB_DIR)
+    post_path = f"{DOCX_DIR}/AFG_Resolution_Post_{date.today().isoformat()}.txt"
+    build_resolution_post(resolved, m, post_path)
 
     print(f"Wrote {docx_path}")
     print(f"Wrote {WEB_DIR}/index.html")
+    if resolved:
+        print(f"Wrote {post_path}")
     if m:
         print(f"  {m['n']} resolved | AFG Brier {m['afg_brier']:.3f} vs market {m['kalshi_brier']:.3f} | Accuracy {m['accuracy']:.0%}")
     else:
