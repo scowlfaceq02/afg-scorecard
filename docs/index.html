@@ -179,11 +179,11 @@
       
       <div class="cards">
         <div class="card">
-          <div class="card-value">2</div>
+          <div class="card-value">3</div>
           <div class="card-label">Total Forecasts Issued</div>
         </div>
         <div class="card good-card">
-          <div class="card-value good">1</div>
+          <div class="card-value good">2</div>
           <div class="card-label">Correct Forecasts</div>
         </div>
         <div class="card bad-card">
@@ -191,24 +191,24 @@
           <div class="card-label">Incorrect Forecasts</div>
         </div>
         <div class="card">
-          <div class="card-value">50%</div>
+          <div class="card-value">67%</div>
           <div class="card-label">Overall Accuracy</div>
         </div>
         <div class="card">
-          <div class="card-value">0.190</div>
+          <div class="card-value">0.132</div>
           <div class="card-label">AFG Brier Score</div>
           <div class="card-sub">lower is better</div>
         </div>
         <div class="card muted-card">
-          <div class="card-value muted">0.187</div>
+          <div class="card-value muted">0.146</div>
           <div class="card-label">Market Brier Score</div>
           <div class="card-sub">the crowd's accuracy</div>
         </div>
       </div>
-      <p class="skill-line bad">
-        AFG trails the Kalshi market by
-        <strong>0.003 Brier points</strong>
-        across 2 resolved forecasts.
+      <p class="skill-line good">
+        AFG outperforms the Kalshi market by
+        <strong>0.014 Brier points</strong>
+        across 3 resolved forecasts.
       </p>
 
       <section>
@@ -228,7 +228,15 @@
             <td class="bad">1</td>
             <td><strong>50%</strong></td>
             <td class="good">0.190</td>
-          </tr><tr><td class='cat-name'>Economics</td><td colspan='5' class='muted'>No resolved forecasts yet</td></tr><tr><td class='cat-name'>Politics</td><td colspan='5' class='muted'>No resolved forecasts yet</td></tr><tr><td class='cat-name'>Culture</td><td colspan='5' class='muted'>No resolved forecasts yet</td></tr><tr><td class='cat-name'>Weather</td><td colspan='5' class='muted'>No resolved forecasts yet</td></tr></tbody>
+          </tr>
+          <tr>
+            <td class="cat-name">Economics</td>
+            <td>1</td>
+            <td class="good">1</td>
+            <td class="bad">0</td>
+            <td><strong>100%</strong></td>
+            <td class="good">0.014</td>
+          </tr><tr><td class='cat-name'>Politics</td><td colspan='5' class='muted'>No resolved forecasts yet</td></tr><tr><td class='cat-name'>Culture</td><td colspan='5' class='muted'>No resolved forecasts yet</td></tr><tr><td class='cat-name'>Weather</td><td colspan='5' class='muted'>No resolved forecasts yet</td></tr></tbody>
         </table>
       </section>
 
@@ -243,6 +251,14 @@
             </tr>
           </thead>
           <tbody>
+          <tr>
+            <td>Fed decision in July — Maintains rate</td>
+            <td class="cat-badge">Economics</td>
+            <td>86%</td>
+            <td><strong>93%</strong></td>
+            <td>YES</td>
+            <td class="good result-cell">✓ Correct</td>
+          </tr>
           <tr>
             <td>LeBron James Next Team — Cleveland Cavaliers</td>
             <td class="cat-badge">Sports</td>

@@ -9,11 +9,11 @@ RESOLVED — LeBron James Next Team — Miami Heat
 Kalshi had it at 48%. AFG said 55% and called BUY YES.
 Settled NO. Wrong.
 
-Record: 1-1 (50%). AFG trails the market 0.190 to 0.187 on Brier score across 2 resolved forecasts.
+Record: 2-1 (67%). AFG leads the market 0.132 to 0.146 on Brier score across 3 resolved forecasts.
 
 Full index: https://scowlfaceq02.github.io/afg-scorecard/
 
 #PredictionMarkets #Kalshi
 
 ============================================================
-Character count: 309
+Character count: 308
