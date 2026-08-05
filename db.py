@@ -92,16 +92,58 @@ def add_predictions_bulk(rows):
     print(f"Logged {len(rows)} predictions for {rows[0]['report_date'] if rows else 'N/A'}")
 
 
+def _parse_date(value):
+    """
+    Parses a stored close date into a datetime.date.
+
+    The database has historically stored dates in two formats: ISO
+    (2026-12-31) and US short form (12/31/2026). A plain SQL string
+    comparison between these is unsafe -- "12/31/2026" <= "2026-08-05"
+    evaluates TRUE because "1" sorts before "2", which caused markets
+    closing in Oct/Nov/Dec to be treated as past due and falsely
+    resolved. Dates are therefore parsed in Python, not compared as text.
+    """
+    import datetime
+    if not value:
+        return None
+    text = str(value).strip()
+    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%m/%d/%y", "%Y/%m/%d"):
+        try:
+            return datetime.datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
 def get_open_predictions_due(as_of_date):
-    """Predictions still marked Open whose contract_close_date has passed."""
+    """
+    Predictions still marked Open whose contract_close_date has genuinely
+    passed. Dates are parsed rather than string-compared -- see _parse_date.
+    """
+    import datetime
+    if isinstance(as_of_date, str):
+        cutoff = _parse_date(as_of_date) or datetime.date.today()
+    else:
+        cutoff = as_of_date
+
     with get_conn() as conn:
         cur = conn.execute(
             """SELECT * FROM predictions
-               WHERE status = 'Open' AND contract_close_date IS NOT NULL
-               AND contract_close_date <= ?""",
-            (as_of_date,),
+               WHERE status = 'Open' AND contract_close_date IS NOT NULL"""
         )
-        return [dict(row) for row in cur.fetchall()]
+        rows = [dict(row) for row in cur.fetchall()]
+
+    due = []
+    for row in rows:
+        close = _parse_date(row.get("contract_close_date"))
+        if close is None:
+            print(f"  WARNING: unparseable close date "
+                  f"{row.get('contract_close_date')!r} for "
+                  f"'{row.get('market')}' -- skipped.")
+            continue
+        if close <= cutoff:
+            due.append(row)
+    return due
 
 
 def record_outcome(prediction_id, outcome):
