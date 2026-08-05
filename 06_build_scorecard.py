@@ -739,6 +739,34 @@ def main():
     print(f"  Total logged    : {n_open + n_resolved}")
     print(f"  Open            : {n_open}")
     print(f"  Resolved        : {n_resolved}")
+
+    # Guard against false resolutions: no market may be marked Resolved
+    # while its contract close date is still in the future.
+    import datetime
+    try:
+        from db import _parse_date
+    except ImportError:
+        _parse_date = None
+    if _parse_date:
+        today_d = datetime.date.today()
+        with get_conn() as conn:
+            res_rows = [dict(r) for r in conn.execute(
+                "SELECT market, kalshi_ticker, contract_close_date "
+                "FROM predictions WHERE status='Resolved'"
+            ).fetchall()]
+        premature = []
+        for r in res_rows:
+            close = _parse_date(r.get("contract_close_date"))
+            if close and close > today_d:
+                premature.append((r["market"], r["kalshi_ticker"], close))
+        if premature:
+            print("")
+            print("  *** STOP — PREMATURE RESOLUTION DETECTED ***")
+            for mkt, tkr, close in premature:
+                print(f"    {mkt} ({tkr}) closes {close} — still in the future.")
+            print("  These markets cannot have settled. Revert them to Open")
+            print("  before publishing. Do NOT push this scorecard.")
+            print("")
     if n_resolved > 0:
         print(f"  WARNING: {n_resolved} resolved calls will be published.")
         print(f"  Confirm each against actual Kalshi settlement before releasing.")
