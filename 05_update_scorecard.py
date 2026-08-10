@@ -74,15 +74,26 @@ def _call_was_correct(r):
 
 def check_resolutions():
     today = datetime.date.today().isoformat()
-    due = get_open_predictions_due(today)
 
-    if not due:
-        print(f"[{today}] No predictions due for resolution check.")
+    # Check ALL open predictions against Kalshi — not just ones past their
+    # close date. Markets can settle early when the underlying event occurs
+    # before the contract's formal expiry (e.g. Blanche confirmed August 8
+    # with a close date of January 2029; Fed held July 29 with a close date
+    # of July 29 — the same day). get_open_predictions_due() only returns
+    # past-due markets and would permanently miss early settlements.
+    from db import get_conn
+    with get_conn() as conn:
+        all_open = [dict(r) for r in conn.execute(
+            "SELECT * FROM predictions WHERE status='Open'"
+        ).fetchall()]
+
+    if not all_open:
+        print(f"[{today}] No open predictions to check.")
         return
 
-    print(f"[{today}] Checking {len(due)} predictions due for resolution...")
+    print(f"[{today}] Checking ALL {len(all_open)} open predictions against Kalshi...")
     resolved_count = 0
-    for pred in due:
+    for pred in all_open:
         ticker = pred.get("kalshi_ticker")
         if not ticker:
             print(f"  SKIP: '{pred['market']}' has no ticker on file.")
