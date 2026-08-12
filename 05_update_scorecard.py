@@ -111,7 +111,7 @@ def check_resolutions():
         resolved_count += 1
         print(f"  RESOLVED: {pred['market']} -> {status['result'].upper()} "
               f"(AFG: {pred['afg_probability']:.0%}, Kalshi: {pred['kalshi_price']:.0%})")
-    print(f"[{today}] Done. {resolved_count} of {len(due)} newly resolved.")
+    print(f"[{today}] Done. {resolved_count} of {len(all_open)} checked, {resolved_count} newly resolved.")
 
 
 def refresh_scorecard():

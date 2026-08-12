@@ -1,0 +1,16 @@
+# AFG — Verified Early Resolutions
+#
+# Markets that settled BEFORE their formal Kalshi contract close date because
+# the underlying real-world event occurred early. Each line must be manually
+# verified against Kalshi's settlement page before being added here.
+#
+# Format:  TICKER  |  settled date  |  outcome  |  what happened
+#
+# WARNING: adding a ticker here disables the premature-resolution guard for
+# that market. Only add a ticker after confirming settlement on Kalshi itself.
+# This file is the reason the Spider-Man false resolution was caught — do not
+# add anything you have not personally checked.
+
+KXNEXTAG-29-TB          | 2026-08-08 | YES | Senate confirmed Todd Blanche 50-49
+KXNEXTTEAMNBA-26LJAM-CLE| 2026-07-24 | NO  | LeBron signed with Philadelphia 76ers
+KXNEXTTEAMNBA-26LJAM-MIA| 2026-07-24 | NO  | LeBron signed with Philadelphia 76ers

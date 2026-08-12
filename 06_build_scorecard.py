@@ -59,6 +59,10 @@ def load_resolved():
 
     # Keep only the earliest report_date per ticker (fall back to market name
     # if a ticker is missing, so untickered legacy rows still dedupe sensibly).
+    # FIRST-CALL-ONLY RULE: when the same ticker appears across multiple
+    # cycles, only the earliest published call scores. This is the hardest
+    # test — it holds AFG accountable at the point of maximum uncertainty.
+    # Reversals are retained in the DB but do not replace the first call.
     first_calls = {}
     duplicates_dropped = 0
     for r in rows:
@@ -68,7 +72,7 @@ def load_resolved():
             first_calls[key] = r
         else:
             duplicates_dropped += 1
-            # keep whichever has the earlier report_date
+            # keep the earlier report_date
             if str(r.get("report_date") or "") < str(existing.get("report_date") or ""):
                 first_calls[key] = r
 
@@ -749,6 +753,19 @@ def main():
         _parse_date = None
     if _parse_date:
         today_d = datetime.date.today()
+
+        # Load verified early resolutions allowlist
+        import os as _os
+        allowlist = set()
+        if _os.path.exists("verified_early_resolutions.txt"):
+            for _line in open("verified_early_resolutions.txt", encoding="utf-8"):
+                _line = _line.strip()
+                if not _line or _line.startswith("#"):
+                    continue
+                _tkr = _line.split("|")[0].strip()
+                if _tkr:
+                    allowlist.add(_tkr)
+
         with get_conn() as conn:
             res_rows = [dict(r) for r in conn.execute(
                 "SELECT market, kalshi_ticker, contract_close_date "
@@ -757,8 +774,9 @@ def main():
         premature = []
         for r in res_rows:
             close = _parse_date(r.get("contract_close_date"))
-            if close and close > today_d:
-                premature.append((r["market"], r["kalshi_ticker"], close))
+            tkr = r.get("kalshi_ticker") or ""
+            if close and close > today_d and tkr not in allowlist:
+                premature.append((r["market"], tkr, close))
         if premature:
             print("")
             print("  *** STOP — PREMATURE RESOLUTION DETECTED ***")
@@ -767,6 +785,12 @@ def main():
             print("  These markets cannot have settled. Revert them to Open")
             print("  before publishing. Do NOT push this scorecard.")
             print("")
+        elif allowlist:
+            verified = [r for r in res_rows
+                        if (r.get("kalshi_ticker") or "") in allowlist]
+            if verified:
+                print(f"  Allowlisted early settlements: "
+                      f"{[r['kalshi_ticker'] for r in verified]}")
     if n_resolved > 0:
         print(f"  WARNING: {n_resolved} resolved calls will be published.")
         print(f"  Confirm each against actual Kalshi settlement before releasing.")

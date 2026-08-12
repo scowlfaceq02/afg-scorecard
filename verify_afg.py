@@ -87,12 +87,25 @@ try:
     check("Database accessible", True,
           f"Total={total}  Open={n_open}  Resolved={n_res}  Void={n_void}")
 
-    # A resolved row is only suspicious if it resolved MORE THAN 30 days
-    # before its contract close date AND its outcome cannot be explained by
-    # a real-world event (e.g. LeBron signing early is legitimate).
-    # The rule: flag anything resolved more than 60 days before close date.
+    # A resolved row is suspicious if it settled well before its contract
+    # close date UNLESS the ticker appears in verified_early_resolutions.txt,
+    # which lists markets manually confirmed against Kalshi's settlement page.
+    # This is what caught the false Spider-Man resolution: it was never
+    # verified, so it stayed flagged.
+    allowlist = set()
+    allow_path = "verified_early_resolutions.txt"
+    if os.path.exists(allow_path):
+        for line in open(allow_path, encoding="utf-8"):
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            ticker = line.split("|")[0].strip()
+            if ticker:
+                allowlist.add(ticker)
+
     today = datetime.date.today()
     suspicious = []
+    allowed_early = []
     null_dates = []
     for r in res_rows:
         close = _parse_date(r.get("contract_close_date"))
@@ -100,16 +113,25 @@ try:
             null_dates.append(r["market"])
             continue
         days_early = (close - today).days
-        # Flag only if close date is still 60+ days away (clearly premature)
         if days_early > 60:
-            suspicious.append((r["market"], r["kalshi_ticker"], str(close), days_early))
+            tkr = r.get("kalshi_ticker") or ""
+            if tkr in allowlist:
+                allowed_early.append((r["market"], tkr, days_early))
+            else:
+                suspicious.append((r["market"], tkr, str(close), days_early))
 
-    check("No clearly premature resolutions (close date 60+ days away)",
-          len(suspicious) == 0,
-          "\n         ".join(
-              [f"PROBLEM: {m} ({t}) — close={c}, {d} days away"
-               for m,t,c,d in suspicious]) if suspicious else
-          "LeBron-style early resolutions (event before formal close date) are OK.")
+    detail = ""
+    if suspicious:
+        detail = "\n         ".join(
+            [f"PROBLEM: {m} ({t}) — close={c}, {d} days away — NOT in "
+             f"verified_early_resolutions.txt" for m, t, c, d in suspicious])
+    elif allowed_early:
+        detail = ("Early settlements verified against Kalshi: "
+                  + ", ".join(f"{t} ({d}d early)" for _, t, d in allowed_early))
+    else:
+        detail = "No early settlements."
+
+    check("No unverified premature resolutions", len(suspicious) == 0, detail)
 
     check("No unparseable close dates", len(null_dates) == 0,
           f"Unparseable: {null_dates}" if null_dates else "", is_warning=True)
