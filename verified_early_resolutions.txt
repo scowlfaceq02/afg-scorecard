@@ -14,3 +14,4 @@
 KXNEXTAG-29-TB          | 2026-08-08 | YES | Senate confirmed Todd Blanche 50-49
 KXNEXTTEAMNBA-26LJAM-CLE| 2026-07-24 | NO  | LeBron signed with Philadelphia 76ers
 KXNEXTTEAMNBA-26LJAM-MIA| 2026-07-24 | NO  | LeBron signed with Philadelphia 76ers
+KXRT-SPI-90 | 2026-08-14 | NO | Spider-Man released Jul 31, RT score settled at 90 percent which does not exceed above-90 threshold 
