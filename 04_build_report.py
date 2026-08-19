@@ -564,6 +564,9 @@ def build_substack_post(df, sections, report_date, output_path):
         "Edge scores, conviction tiers, full reasoning and the complete "
         "10-market conviction table are available to paid subscribers.",
         "",
+        "[**Subscribe to AFG on Substack**](https://axiomforecastinggroup.substack.com) "
+        "— research published every Monday, Wednesday, and Friday.",
+        "",
         "Every AFG call is logged and scored against the market's own implied "
         "probability. Track the record here: "
         "**[AFG Forecast Accuracy Index](https://scowlfaceq02.github.io/afg-scorecard/)**",
@@ -586,13 +589,16 @@ def build_twitter_post(df, report_date, output_path):
     edge_pp = top["edge_score"] * 100
     direction = "overpricing" if edge_pp < 0 else "underpricing"
 
+    # X counts every URL as 23 chars (t.co wrapping).
+    # Target: ≤280 X-adjusted chars. Two URLs = 46 URL chars.
+    # Budget for non-URL content: 280 - 46 = 234 chars.
     post = (
-        f"AFG call — {top['market']}\n\n"
-        f"Kalshi: {top['kalshi_price']:.0%}  |  AFG: {top['afg_probability']:.0%}  "
-        f"|  Edge: {edge_pp:+.0f}pp\n\n"
-        f"{top['recommendation']} — the market is {direction} this by "
-        f"{abs(edge_pp):.0f} points on our read.\n\n"
-        f"Track record: https://scowlfaceq02.github.io/afg-scorecard/\n\n"
+        f"AFG: {top['market']}\n"
+        f"Kalshi {top['kalshi_price']:.0%} → AFG {top['afg_probability']:.0%} "
+        f"({edge_pp:+.0f}pp)\n\n"
+        f"{top['recommendation']} — market is {direction} this.\n\n"
+        f"📊 Track record: https://scowlfaceq02.github.io/afg-scorecard/\n"
+        f"📬 Subscribe free: https://axiomforecastinggroup.substack.com/welcome\n\n"
         f"#PredictionMarkets #Kalshi"
     )
 

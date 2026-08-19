@@ -164,8 +164,19 @@ except Exception as e:
 print("\n=== 6. SCORECARD DEDUPLICATION ===")
 if os.path.exists("06_build_scorecard.py"):
     src6 = open("06_build_scorecard.py", encoding="utf-8").read()
-    check("load_resolved() applies first-call-only dedup",
-          "first_calls" in src6 and "kalshi_ticker" in src6)
+    # Dual-track rule (Aug 2026): load_resolved(mode="first"|"last") computes
+    # First-Call Accuracy and Updated-Position Accuracy side by side.
+    has_dual   = 'mode="first"' in src6 or "mode='first'" in src6
+    has_dedup  = "kalshi_ticker" in src6 and ("calls[key]" in src6 or "first_calls" in src6)
+    has_history = "load_position_history" in src6
+    check("load_resolved() applies ticker-level dedup",
+          has_dedup,
+          "Deduplicates resolved rows by kalshi_ticker before scoring.")
+    check("Dual-track scoring present (First-Call + Updated-Position)",
+          has_dual and has_history,
+          "Both accuracy tracks computed and published side by side."
+          if (has_dual and has_history) else
+          "Expected load_resolved(mode=...) and load_position_history().")
 
 # ── 7. Logger dedup ──────────────────────────────────────────────────────────
 print("\n=== 7. PREDICTION LOGGER ===")

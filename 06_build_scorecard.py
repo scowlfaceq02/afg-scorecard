@@ -40,53 +40,95 @@ WEB_DIR        = "docs"
 
 # ── data ─────────────────────────────────────────────────────────────────────
 
-def load_resolved():
+def load_resolved(mode="first"):
     """
-    Loads resolved predictions, applying the FIRST-CALL-ONLY rule:
-    when the same market (same kalshi_ticker) was published across multiple
-    report cycles, only AFG's earliest forecast counts toward the published
-    Forecast Accuracy Index. This is the hardest test — it scores the call
-    made at the point of maximum uncertainty, not one refined as evidence
-    accumulated.
+    Loads resolved predictions, deduplicated by kalshi_ticker.
 
-    Later republished calls on the same ticker remain in the database for
-    internal reference but are excluded from all scorecard metrics.
+    mode="first" (FIRST-CALL ACCURACY): keeps AFG's earliest published call
+    per ticker. This is the hardest test — it scores the call made at the
+    point of maximum uncertainty and is the PRIMARY trust metric.
+
+    mode="last" (UPDATED-POSITION ACCURACY): keeps AFG's latest published
+    call per ticker before resolution. This credits disciplined Bayesian
+    updating on genuine new information or corrected research errors.
+
+    DUAL-TRACK RULE (adopted August 2026): both numbers are always computed
+    and displayed side by side with equal visual weight. Neither replaces
+    the other. This lets AFG credit honest updating (e.g. the Oscar Best
+    Picture correction, where the first call rested on a stale premise)
+    without opening a loophole where any wrong call can be laundered into
+    a right one by relabeling it "an update" (the risk flagged with the
+    Blanche reversal, where the first call stays scored as incorrect on
+    the first-call track regardless of this function's other mode).
     """
     with get_conn() as conn:
         rows = [dict(r) for r in conn.execute(
             "SELECT * FROM predictions WHERE status='Resolved' ORDER BY contract_close_date DESC"
         ).fetchall()]
 
-    # Keep only the earliest report_date per ticker (fall back to market name
-    # if a ticker is missing, so untickered legacy rows still dedupe sensibly).
-    # FIRST-CALL-ONLY RULE: when the same ticker appears across multiple
-    # cycles, only the earliest published call scores. This is the hardest
-    # test — it holds AFG accountable at the point of maximum uncertainty.
-    # Reversals are retained in the DB but do not replace the first call.
-    first_calls = {}
+    calls = {}
     duplicates_dropped = 0
     for r in rows:
         key = r.get("kalshi_ticker") or r.get("market")
-        existing = first_calls.get(key)
+        existing = calls.get(key)
         if existing is None:
-            first_calls[key] = r
+            calls[key] = r
         else:
             duplicates_dropped += 1
-            # keep the earlier report_date
-            if str(r.get("report_date") or "") < str(existing.get("report_date") or ""):
-                first_calls[key] = r
+            r_date  = str(r.get("report_date") or "")
+            ex_date = str(existing.get("report_date") or "")
+            if mode == "first":
+                if r_date < ex_date:
+                    calls[key] = r
+            else:  # mode == "last"
+                if r_date > ex_date:
+                    calls[key] = r
 
     deduped = sorted(
-        first_calls.values(),
+        calls.values(),
         key=lambda x: str(x.get("contract_close_date") or ""),
         reverse=True,
     )
 
-    if duplicates_dropped:
+    if duplicates_dropped and mode == "first":
         print(f"  Deduplication: {duplicates_dropped} repeat forecast(s) excluded "
-              f"(first-call-only rule). {len(deduped)} unique market(s) scored.")
+              f"(first-call-only rule). {len(deduped)} unique market(s) scored "
+              f"on the First-Call track.")
 
     return deduped
+
+
+def load_position_history():
+    """
+    Builds a per-ticker comparison of the first published call vs the last
+    published call before resolution, for markets where AFG changed
+    direction. Used to render the reversal disclosure table.
+    """
+    with get_conn() as conn:
+        rows = [dict(r) for r in conn.execute(
+            "SELECT * FROM predictions WHERE status='Resolved' ORDER BY report_date"
+        ).fetchall()]
+
+    by_ticker = {}
+    for r in rows:
+        key = r.get("kalshi_ticker") or r.get("market")
+        by_ticker.setdefault(key, []).append(r)
+
+    history = []
+    for key, calls in by_ticker.items():
+        calls.sort(key=lambda x: str(x.get("report_date") or ""))
+        first, last = calls[0], calls[-1]
+        reversed_ = first.get("recommendation") != last.get("recommendation")
+        history.append({
+            "market": first["market"],
+            "category": first["category"],
+            "first": first,
+            "last": last,
+            "reversed": reversed_,
+        })
+
+    history.sort(key=lambda h: str(h["last"].get("contract_close_date") or ""), reverse=True)
+    return history
 
 
 def call_correct(r):
@@ -209,7 +251,7 @@ def _metric_row(doc, label, value, value_color=None, sub=None):
 
 # ── Word doc ─────────────────────────────────────────────────────────────────
 
-def build_docx(resolved, m, out_path):
+def build_docx(resolved_first, m_first, m_last, history, out_path):
     doc = Document()
     sec = doc.sections[0]
     sec.page_width  = Inches(8.5); sec.page_height = Inches(11)
@@ -232,7 +274,7 @@ def build_docx(resolved, m, out_path):
     _run(p2, "AFG Forecast Accuracy Index", size=14, bold=True, color=NAVY)
     _run(p2, f"   |   Updated {date.today().strftime('%B %d, %Y')}", size=12, color=BLUE)
 
-    if m is None:
+    if m_first is None:
         p3 = doc.add_paragraph()
         p3.paragraph_format.space_before = Pt(24)
         p3.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -243,39 +285,46 @@ def build_docx(resolved, m, out_path):
         doc.save(out_path)
         return
 
-    # ── Overall metrics ───────────────────────────────────────────────────────
-    _heading(doc, "Overall Performance")
+    # ── Overall metrics — DUAL TRACK, equal visual weight ────────────────────
+    _heading(doc, "Overall Performance — Two Tracks")
+    p_expl = doc.add_paragraph()
+    p_expl.paragraph_format.space_after = Pt(8)
+    _run(p_expl, "AFG publishes both numbers every cycle. Neither replaces the other.",
+         size=9.5, italic=True, color=GRAY)
 
-    beat = m["skill_delta"] > 0
-    # 4-cell metric grid
-    t = doc.add_table(rows=1, cols=4)
-    labels   = ["Total Forecasts", "Correct", "Incorrect", "AFG Brier Score"]
-    values   = [m["n"], m["correct"], m["incorrect"], f"{m['afg_brier']:.3f}"]
-    colors   = [NAVY, GREEN, RED, NAVY]
-    fills    = ["F8FAFC", GREEN_FILL, RED_FILL, "F8FAFC"]
-    for i, (lbl, val, col, fill) in enumerate(zip(labels, values, colors, fills)):
-        c = t.rows[0].cells[i]; c.text = ""
-        _shade(c, fill); _borders(c, "C8D4E8")
+    track_t = doc.add_table(rows=1, cols=2)
+    track_headers = ["First-Call Accuracy  (hardest test)", "Updated-Position Accuracy"]
+    for i, h in enumerate(track_headers):
+        c = track_t.rows[0].cells[i]; c.text = ""
+        _shade(c, HEADER_FILL); _borders(c, "C8D4E8")
         cp = c.paragraphs[0]; cp.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        cp.paragraph_format.space_before = Pt(8); cp.paragraph_format.space_after = Pt(2)
-        _run(cp, str(val), size=22, bold=True, color=col)
-        p_lbl = c.add_paragraph(); p_lbl.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p_lbl.paragraph_format.space_before = Pt(0); p_lbl.paragraph_format.space_after = Pt(8)
-        _run(p_lbl, lbl, size=9, bold=True, color=GRAY)
-    _set_widths(t, [2700, 2700, 2700, 2700])
+        cp.paragraph_format.space_before = Pt(6); cp.paragraph_format.space_after = Pt(6)
+        _run(cp, h, size=10, bold=True, color=NAVY)
 
-    # Skill delta line
-    p_sk = doc.add_paragraph()
-    p_sk.paragraph_format.space_before = Pt(8); p_sk.paragraph_format.space_after = Pt(2)
-    p_sk.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    delta_word = "beats" if beat else "trails"
-    delta_col  = GREEN if beat else RED
-    _run(p_sk, "Accuracy: ", size=11, bold=True, color=NAVY)
-    _run(p_sk, f"{m['accuracy']:.0%}", size=13, bold=True, color=NAVY)
-    _run(p_sk, "   |   AFG ", size=10.5, color=GRAY)
-    _run(p_sk, f"{delta_word} the Kalshi market", size=10.5, bold=True, color=delta_col)
-    _run(p_sk, f" by {abs(m['skill_delta']):.3f} Brier points", size=10.5, color=GRAY)
-    _run(p_sk, f"  (Market Brier: {m['kalshi_brier']:.3f})", size=9.5, italic=True, color=GRAY)
+    row = track_t.add_row()
+    for i, m in enumerate([m_first, m_last]):
+        c = row.cells[i]; c.text = ""
+        beat = m["skill_delta"] > 0
+        delta_word = "beats" if beat else "trails"
+        delta_col  = GREEN if beat else RED
+        cp = c.paragraphs[0]; cp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        cp.paragraph_format.space_before = Pt(10); cp.paragraph_format.space_after = Pt(2)
+        _run(cp, f"{m['correct']}-{m['incorrect']}", size=26, bold=True, color=NAVY)
+        p_acc = c.add_paragraph(); p_acc.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_acc.paragraph_format.space_after = Pt(4)
+        _run(p_acc, f"{m['accuracy']:.0%} accuracy", size=11, bold=True, color=NAVY)
+        p_br = c.add_paragraph(); p_br.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_br.paragraph_format.space_after = Pt(2)
+        _run(p_br, f"AFG Brier {m['afg_brier']:.3f}", size=9.5, color=GRAY)
+        p_dl = c.add_paragraph(); p_dl.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_dl.paragraph_format.space_after = Pt(10)
+        _run(p_dl, f"{delta_word} market by {abs(m['skill_delta']):.3f}",
+             size=9, bold=True, color=delta_col)
+        _borders(c, "C8D4E8")
+    _set_widths(track_t, [5400, 5400])
+
+    m = m_first  # category breakdown and recent-forecasts table use First-Call
+    resolved = resolved_first
 
     # ── By category ───────────────────────────────────────────────────────────
     _heading(doc, "Accuracy by Category")
@@ -354,6 +403,50 @@ def build_docx(resolved, m, out_path):
 
         _set_widths(rec_t, col_widths)
 
+    # ── Position changes (reversals) — full disclosure ──────────────────────
+    reversals = [h for h in history if h["reversed"]]
+    if reversals:
+        _heading(doc, "Position Changes")
+        p_rv = doc.add_paragraph()
+        p_rv.paragraph_format.space_after = Pt(6)
+        _run(p_rv, "Markets where AFG's published call changed direction before "
+                   "resolution. The First-Call track above scores the original "
+                   "call; the Updated-Position track scores the call shown here "
+                   "as \"Last Call.\"", size=9, italic=True, color=GRAY)
+
+        rv_headers  = ["Market", "First Call", "First Result", "Last Call", "Last Result"]
+        rv_widths   = [3600, 1800, 1800, 1800, 1800]  # sum = 10800
+        rv_t = doc.add_table(rows=1, cols=len(rv_headers))
+        for i, h in enumerate(rv_headers):
+            c = rv_t.rows[0].cells[i]; c.text = ""
+            cp = c.paragraphs[0]
+            cp.paragraph_format.space_before = Pt(4); cp.paragraph_format.space_after = Pt(4)
+            _run(cp, h, size=9.5, bold=True, color=NAVY)
+            _shade(c, HEADER_FILL); _borders(c)
+
+        for h in reversals:
+            row = rv_t.add_row()
+            f, l = h["first"], h["last"]
+            f_hit = call_correct(f); l_hit = call_correct(l)
+            f_call_col = GREEN if f["recommendation"] == "BUY YES" else RED
+            l_call_col = GREEN if l["recommendation"] == "BUY YES" else RED
+            f_res_col  = GREEN if f_hit else RED
+            l_res_col  = GREEN if l_hit else RED
+            vals = [
+                (h["market"][:38], NAVY, False),
+                (f"{f['recommendation']} @ {f['afg_probability']:.0%}", f_call_col, True),
+                ("Correct" if f_hit else "Incorrect", f_res_col, True),
+                (f"{l['recommendation']} @ {l['afg_probability']:.0%}", l_call_col, True),
+                ("Correct" if l_hit else "Incorrect", l_res_col, True),
+            ]
+            for i, (val, col, bold) in enumerate(vals):
+                c = row.cells[i]; c.text = ""
+                cp = c.paragraphs[0]
+                cp.paragraph_format.space_before = Pt(3); cp.paragraph_format.space_after = Pt(3)
+                _run(cp, val, size=9, bold=bold, color=col)
+                _borders(c)
+        _set_widths(rv_t, rv_widths)
+
     # footnote
     p_fn = doc.add_paragraph()
     p_fn.paragraph_format.space_before = Pt(16)
@@ -366,10 +459,11 @@ def build_docx(resolved, m, out_path):
 
 # ── Website ───────────────────────────────────────────────────────────────────
 
-def build_website(resolved, m, out_dir):
+def build_website(resolved, m, out_dir, m_last=None, history=None):
     os.makedirs(out_dir, exist_ok=True)
     updated = date.today().strftime("%B %d, %Y")
     year    = date.today().year
+    history = history or []
 
     if m is None:
         body = """
@@ -384,7 +478,31 @@ def build_website(resolved, m, out_dir):
         delta_cls  = "good" if beat else "bad"
         delta_word = "outperforms" if beat else "trails"
 
-        # headline cards
+        # DUAL-TRACK comparison — equal visual weight, neither hidden
+        def _track_block(track_m, label):
+            tbeat = track_m["skill_delta"] > 0
+            tcls  = "good" if tbeat else "bad"
+            tword = "beats" if tbeat else "trails"
+            return f"""
+        <div class="track-block">
+          <div class="track-label">{label}</div>
+          <div class="track-score">{track_m['correct']}-{track_m['incorrect']}</div>
+          <div class="track-acc">{track_m['accuracy']:.0%} accuracy</div>
+          <div class="track-brier">AFG Brier {track_m['afg_brier']:.3f}</div>
+          <div class="track-delta {tcls}">{tword} market by {abs(track_m['skill_delta']):.3f}</div>
+        </div>"""
+
+        m_last_display = m_last or m
+        tracks = f"""
+      <div class="tracks-wrap">
+        <p class="tracks-note">AFG publishes both numbers every cycle. Neither replaces the other.</p>
+        <div class="tracks">
+          {_track_block(m, "First-Call Accuracy (hardest test)")}
+          {_track_block(m_last_display, "Updated-Position Accuracy")}
+        </div>
+      </div>"""
+
+        # headline cards (First-Call basis)
         cards = f"""
       <div class="cards">
         <div class="card">
@@ -417,7 +535,7 @@ def build_website(resolved, m, out_dir):
       <p class="skill-line {delta_cls}">
         AFG {delta_word} the Kalshi market by
         <strong>{abs(m['skill_delta']):.3f} Brier points</strong>
-        across {m['n']} resolved forecasts.
+        across {m['n']} resolved forecasts (First-Call basis).
       </p>"""
 
         # category table
@@ -457,11 +575,54 @@ def build_website(resolved, m, out_dir):
             <td class="{hit_cls} result-cell">{hit_icon} {"Correct" if hit else "Incorrect"}</td>
           </tr>"""
 
+        # position changes (reversals) — full disclosure
+        reversal_rows = ""
+        for h in history:
+            if not h["reversed"]:
+                continue
+            f, l = h["first"], h["last"]
+            f_hit = call_correct(f); l_hit = call_correct(l)
+            f_cls = "good" if f["recommendation"] == "BUY YES" else "bad"
+            l_cls = "good" if l["recommendation"] == "BUY YES" else "bad"
+            f_res_cls = "good" if f_hit else "bad"
+            l_res_cls = "good" if l_hit else "bad"
+            reversal_rows += f"""
+          <tr>
+            <td>{h['market'][:56]}</td>
+            <td class="{f_cls}">{f['recommendation']} @ {f['afg_probability']:.0%}</td>
+            <td class="{f_res_cls} result-cell">{"✓" if f_hit else "✗"} {"Correct" if f_hit else "Incorrect"}</td>
+            <td class="{l_cls}">{l['recommendation']} @ {l['afg_probability']:.0%}</td>
+            <td class="{l_res_cls} result-cell">{"✓" if l_hit else "✗"} {"Correct" if l_hit else "Incorrect"}</td>
+          </tr>"""
+
+        reversals_section = ""
+        if reversal_rows:
+            reversals_section = f"""
+      <section>
+        <h2>Position Changes</h2>
+        <p class="tracks-note">Markets where AFG's call changed direction before resolution.
+           The First-Call track scores the original call; Updated-Position scores the "Last Call" shown here.</p>
+        <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Market</th><th>First Call</th><th>First Result</th>
+              <th>Last Call</th><th>Last Result</th>
+            </tr>
+          </thead>
+          <tbody>{reversal_rows}</tbody>
+        </table>
+        </div>
+      </section>"""
+
         body = f"""
+      {tracks}
+
       {cards}
 
       <section>
         <h2>Accuracy by Category</h2>
+        <p class="tracks-note">First-Call basis.</p>
         <table>
           <thead>
             <tr>
@@ -472,6 +633,7 @@ def build_website(resolved, m, out_dir):
           <tbody>{cat_rows}</tbody>
         </table>
       </section>
+      {reversals_section}
 
       <section>
         <h2>Recent Resolved Forecasts</h2>
@@ -572,6 +734,30 @@ def build_website(resolved, m, out_dir):
     }}
     .skill-line.good {{ color: var(--green); border-color: #A8D5B5; background: var(--green-bg); }}
     .skill-line.bad  {{ color: var(--red);   border-color: #F0B8B5; background: var(--red-bg); }}
+
+    /* ── Dual-track comparison ── */
+    .tracks-wrap {{ margin-bottom: 24px; }}
+    .tracks-note {{ font-size: 0.82rem; color: var(--gray); text-align: center; margin-bottom: 12px; font-style: italic; }}
+    .tracks {{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }}
+    .track-block {{
+      background: var(--white);
+      border: 2px solid var(--blue);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }}
+    .track-label {{ font-size: 0.8rem; font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 8px; }}
+    .track-score {{ font-size: 1.8rem; font-weight: 700; color: var(--navy); }}
+    .track-acc   {{ font-size: 0.95rem; font-weight: 700; color: var(--navy); margin-top: 2px; }}
+    .track-brier {{ font-size: 0.82rem; color: var(--gray); margin-top: 4px; }}
+    .track-delta {{ font-size: 0.8rem; font-weight: 700; margin-top: 6px; }}
+    .track-delta.good {{ color: var(--green); }}
+    .track-delta.bad  {{ color: var(--red); }}
+    @media (max-width: 640px) {{ .tracks {{ grid-template-columns: 1fr; }} }}
 
     /* ── Section headings ── */
     section {{ margin-top: 36px; }}
@@ -798,21 +984,32 @@ def main():
         print(f"  Output will show: no resolved forecasts yet.")
     print(f"=================================")
 
-    resolved = load_resolved()
-    m        = compute_metrics(resolved)
+    resolved_first = load_resolved(mode="first")
+    resolved_last  = load_resolved(mode="last")
+    history        = load_position_history()
+    m_first = compute_metrics(resolved_first)
+    m_last  = compute_metrics(resolved_last)
+
+    n_reversals = sum(1 for h in history if h["reversed"])
+    if n_reversals:
+        print(f"  Position changes: {n_reversals} market(s) where AFG's call "
+              f"reversed before resolution. Both tracks shown in the scorecard.")
 
     docx_path = f"{DOCX_DIR}/AFG_Scorecard_{date.today().isoformat()}.docx"
-    build_docx(resolved, m, docx_path)
-    build_website(resolved, m, WEB_DIR)
+    build_docx(resolved_first, m_first, m_last, history, docx_path)
+    build_website(resolved_first, m_first, WEB_DIR, m_last=m_last, history=history)
     post_path = f"{DOCX_DIR}/AFG_Resolution_Post_{date.today().isoformat()}.txt"
-    build_resolution_post(resolved, m, post_path)
+    build_resolution_post(resolved_first, m_first, post_path)
 
     print(f"Wrote {docx_path}")
     print(f"Wrote {WEB_DIR}/index.html")
-    if resolved:
+    if resolved_first:
         print(f"Wrote {post_path}")
-    if m:
-        print(f"  {m['n']} resolved | AFG Brier {m['afg_brier']:.3f} vs market {m['kalshi_brier']:.3f} | Accuracy {m['accuracy']:.0%}")
+    if m_first:
+        print(f"  First-Call:       {m_first['n']} resolved | Brier {m_first['afg_brier']:.3f} "
+              f"vs market {m_first['kalshi_brier']:.3f} | Accuracy {m_first['accuracy']:.0%}")
+        print(f"  Updated-Position: {m_last['n']} resolved | Brier {m_last['afg_brier']:.3f} "
+              f"vs market {m_last['kalshi_brier']:.3f} | Accuracy {m_last['accuracy']:.0%}")
     else:
         print(f"  No resolved forecasts — index will populate as markets settle.")
 

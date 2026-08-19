@@ -83,6 +83,30 @@
     .skill-line.good { color: var(--green); border-color: #A8D5B5; background: var(--green-bg); }
     .skill-line.bad  { color: var(--red);   border-color: #F0B8B5; background: var(--red-bg); }
 
+    /* ── Dual-track comparison ── */
+    .tracks-wrap { margin-bottom: 24px; }
+    .tracks-note { font-size: 0.82rem; color: var(--gray); text-align: center; margin-bottom: 12px; font-style: italic; }
+    .tracks {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .track-block {
+      background: var(--white);
+      border: 2px solid var(--blue);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+    .track-label { font-size: 0.8rem; font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 8px; }
+    .track-score { font-size: 1.8rem; font-weight: 700; color: var(--navy); }
+    .track-acc   { font-size: 0.95rem; font-weight: 700; color: var(--navy); margin-top: 2px; }
+    .track-brier { font-size: 0.82rem; color: var(--gray); margin-top: 4px; }
+    .track-delta { font-size: 0.8rem; font-weight: 700; margin-top: 6px; }
+    .track-delta.good { color: var(--green); }
+    .track-delta.bad  { color: var(--red); }
+    @media (max-width: 640px) { .tracks { grid-template-columns: 1fr; } }
+
     /* ── Section headings ── */
     section { margin-top: 36px; }
     h2 {
@@ -171,11 +195,34 @@
     <div class="logo-rule"></div>
     <h1>AFG Forecast Accuracy Index</h1>
     <div class="sub">Axiom Forecasting Group · Prediction Markets Research</div>
-    <div class="updated">Last updated August 17, 2026</div>
+    <div class="updated">Last updated August 19, 2026</div>
   </header>
 
   <main>
     
+      
+      <div class="tracks-wrap">
+        <p class="tracks-note">AFG publishes both numbers every cycle. Neither replaces the other.</p>
+        <div class="tracks">
+          
+        <div class="track-block">
+          <div class="track-label">First-Call Accuracy (hardest test)</div>
+          <div class="track-score">5-1</div>
+          <div class="track-acc">83% accuracy</div>
+          <div class="track-brier">AFG Brier 0.134</div>
+          <div class="track-delta good">beats market by 0.044</div>
+        </div>
+          
+        <div class="track-block">
+          <div class="track-label">Updated-Position Accuracy</div>
+          <div class="track-score">5-1</div>
+          <div class="track-acc">83% accuracy</div>
+          <div class="track-brier">AFG Brier 0.129</div>
+          <div class="track-delta good">beats market by 0.045</div>
+        </div>
+        </div>
+      </div>
+
       
       <div class="cards">
         <div class="card">
@@ -208,11 +255,12 @@
       <p class="skill-line good">
         AFG outperforms the Kalshi market by
         <strong>0.044 Brier points</strong>
-        across 6 resolved forecasts.
+        across 6 resolved forecasts (First-Call basis).
       </p>
 
       <section>
         <h2>Accuracy by Category</h2>
+        <p class="tracks-note">First-Call basis.</p>
         <table>
           <thead>
             <tr>
@@ -263,6 +311,7 @@
           </tr></tbody>
         </table>
       </section>
+      
 
       <section>
         <h2>Recent Resolved Forecasts</h2>
