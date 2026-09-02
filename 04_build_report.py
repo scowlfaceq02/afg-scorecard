@@ -580,27 +580,38 @@ def build_substack_post(df, sections, report_date, output_path):
         f.write("\n".join(lines))
 
 
-def build_twitter_post(df, report_date, output_path):
+def build_twitter_post(df, sections, report_date, output_path):
     """
-    Single top call, WITH edge score and a one-sentence rationale.
-    Written to be pasted straight into X/Twitter.
-    """
-    top = df.iloc[0]
-    edge_pp = top["edge_score"] * 100
-    direction = "overpricing" if edge_pp < 0 else "underpricing"
+    ENGAGEMENT FORMAT (adopted August 2026). NOT a BUY YES/NO announcement.
 
-    # X counts every URL as 23 chars (t.co wrapping).
-    # Target: ≤280 X-adjusted chars. Two URLs = 46 URL chars.
-    # Budget for non-URL content: 280 - 46 = 234 chars.
-    post = (
-        f"AFG: {top['market']}\n"
-        f"Kalshi {top['kalshi_price']:.0%} → AFG {top['afg_probability']:.0%} "
-        f"({edge_pp:+.0f}pp)\n\n"
-        f"{top['recommendation']} — market is {direction} this.\n\n"
-        f"📊 Track record: https://scowlfaceq02.github.io/afg-scorecard/\n"
-        f"📬 Subscribe free: https://axiomforecastinggroup.substack.com/welcome\n\n"
-        f"#PredictionMarkets #Kalshi"
-    )
+    Body copy is 150 characters or less and is authored per cycle in the
+    narrative file under "## Twitter Post". It pulls ONE interesting
+    observation from the research and opens with tension or a question so
+    readers reply. Four rotating formats:
+      (1) Probability Gap      (2) Forecasting Lesson
+      (3) What the Market Is Missing   (4) Scorecard
+
+    The old "AFG: <market> / Kalshi X% -> AFG Y% / BUY NO" format is
+    deliberately gone. If the narrative omits a "## Twitter Post" section
+    this function raises rather than silently falling back to the old
+    format, because a silent fallback is how the wrong format shipped once
+    already.
+    """
+    body = (sections.get("Twitter Post") or "").strip()
+    if not body:
+        raise ValueError(
+            "approved_narrative.md is missing a '## Twitter Post' section. "
+            "The engagement format requires per-cycle authored copy — there "
+            "is no automatic fallback."
+        )
+
+    SCORECARD_URL = "https://scowlfaceq02.github.io/afg-scorecard/"
+    SUBSTACK_URL  = "https://axiomforecastinggroup.substack.com/welcome"
+
+    post = f"{body}\n\n📊 {SCORECARD_URL}\n📬 {SUBSTACK_URL}"
+
+    # X counts every URL as 23 chars regardless of true length
+    adjusted = post.replace(SCORECARD_URL, "x" * 23).replace(SUBSTACK_URL, "x" * 23)
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(f"AFG TWITTER POST — {report_date}\n")
@@ -609,7 +620,36 @@ def build_twitter_post(df, report_date, output_path):
         f.write("=" * 60 + "\n\n")
         f.write(post)
         f.write("\n\n" + "=" * 60 + "\n")
-        f.write(f"Character count: {len(post)}\n")
+        f.write(f"Body copy: {len(body)} chars (target <= 150)\n")
+        f.write(f"Full post X-adjusted: {len(adjusted)} / 280\n")
+
+    if len(body) > 150:
+        print(f"  WARNING: Twitter body is {len(body)} chars, over the 150 target.")
+
+
+def build_substack_note(sections, report_date, output_path):
+    """
+    Substack Note — published Mon/Wed/Fri alongside the research post.
+    Same voice as the Twitter post but conversational: state the two
+    probabilities, name the move, then pose the analytical question rather
+    than answering it. Commentary, not advertisement.
+
+    Authored per cycle in the narrative under "## Substack Note".
+    """
+    body = (sections.get("Substack Note") or "").strip()
+    if not body:
+        raise ValueError(
+            "approved_narrative.md is missing a '## Substack Note' section."
+        )
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(f"AFG SUBSTACK NOTE — {report_date}\n")
+        f.write("=" * 60 + "\n")
+        f.write("Paste into Substack Notes. Link to today's post at the end.\n")
+        f.write("=" * 60 + "\n\n")
+        f.write(body)
+        f.write("\n\n[link to today's Substack post]\n")
+        f.write("\n" + "=" * 60 + "\n")
 
 
 def main():
@@ -624,16 +664,19 @@ def main():
     docx_path = f"{REPORTS_DIR}/AFG_Research_Report_{file_date}.docx"
     post_path    = f"{REPORTS_DIR}/AFG_Substack_Post_{file_date}.md"
     twitter_path = f"{REPORTS_DIR}/AFG_Twitter_Post_{file_date}.txt"
+    note_path    = f"{REPORTS_DIR}/AFG_Substack_Note_{file_date}.txt"
 
     build_docx(df, sections, contrarian_rows, report_date, docx_path)
     build_xlsx(df, XLSX_OUTPUT_PATH)
     build_substack_post(df, sections, report_date, post_path)
-    build_twitter_post(df, report_date, twitter_path)
+    build_twitter_post(df, sections, report_date, twitter_path)
+    build_substack_note(sections, report_date, note_path)
 
     print(f"Wrote {docx_path}")
     print(f"Wrote {XLSX_OUTPUT_PATH}")
     print(f"Wrote {post_path}")
     print(f"Wrote {twitter_path}")
+    print(f"Wrote {note_path}")
 
 
 if __name__ == "__main__":
