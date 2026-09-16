@@ -415,7 +415,12 @@ def build_docx(df, sections, contrarian_rows, report_date, output_path):
 
     add_section_heading(doc, "10 Highest Conviction Opportunities")
     add_body_paragraph(doc, "Top 10, ranked by absolute AFG Edge Score (AFG Probability minus Kalshi implied probability).", italic=True, size=9)
-    add_opportunities_table(doc, df.head(10))
+    # The conviction table lists ACTIONABLE opportunities only. A NO TRADE is
+    # by definition not an opportunity, so it is excluded here even when its
+    # raw edge score would rank it in the top ten. NO TRADE positions remain
+    # documented in the category narratives and the Publication Note.
+    actionable = df[df["recommendation"].str.upper().str.contains("BUY", na=False)]
+    add_opportunities_table(doc, actionable.head(10))
 
     for category in CATEGORY_ORDER:
         if category in sections and sections[category]:
