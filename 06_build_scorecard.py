@@ -66,6 +66,16 @@ def load_resolved(mode="first"):
             "SELECT * FROM predictions WHERE status='Resolved' ORDER BY contract_close_date DESC"
         ).fetchall()]
 
+    # CLOSED-POSITION RULE (adopted September 2026). A position AFG exited
+    # before resolution had no live recommendation at settlement — a subscriber
+    # following AFG held nothing. The Updated-Position track therefore excludes
+    # it. The First-Call track still scores the original call, because it was
+    # published and closing later does not erase it. Closed positions are
+    # disclosed in their own table so the record stays complete; this is
+    # deliberately NOT a mechanism for removing losses from the record.
+    if mode == "last":
+        rows = [r for r in rows if not r.get("afg_closed")]
+
     calls = {}
     duplicates_dropped = 0
     for r in rows:
@@ -129,6 +139,45 @@ def load_position_history():
 
     history.sort(key=lambda h: str(h["last"].get("contract_close_date") or ""), reverse=True)
     return history
+
+
+def load_closed_positions():
+    """
+    Contracts AFG exited before resolution. Returns the earliest published
+    call per ticker together with the closure date, the stated reason, and
+    the eventual outcome. These appear in their own disclosure table.
+    """
+    with get_conn() as conn:
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(predictions)").fetchall()}
+        if "afg_closed" not in cols:
+            return []
+        rows = [dict(r) for r in conn.execute(
+            "SELECT * FROM predictions WHERE status='Resolved' AND afg_closed=1 "
+            "ORDER BY report_date"
+        ).fetchall()]
+
+    by_ticker = {}
+    for r in rows:
+        key = r.get("kalshi_ticker") or r.get("market")
+        by_ticker.setdefault(key, []).append(r)
+
+    closed = []
+    for key, calls in by_ticker.items():
+        calls.sort(key=lambda x: str(x.get("report_date") or ""))
+        first = calls[0]
+        closed.append({
+            "market":        first["market"],
+            "category":      first["category"],
+            "first_call":    first.get("recommendation"),
+            "first_prob":    first.get("afg_probability"),
+            "closed_date":   first.get("afg_closed_date"),
+            "closed_reason": first.get("afg_closed_reason"),
+            "outcome":       first.get("outcome"),
+            "would_have_hit": call_correct(first),
+        })
+
+    closed.sort(key=lambda c: str(c.get("closed_date") or ""), reverse=True)
+    return closed
 
 
 def call_correct(r):
@@ -251,7 +300,7 @@ def _metric_row(doc, label, value, value_color=None, sub=None):
 
 # ── Word doc ─────────────────────────────────────────────────────────────────
 
-def build_docx(resolved_first, m_first, m_last, history, out_path):
+def build_docx(resolved_first, m_first, m_last, history, closed, out_path):
     doc = Document()
     sec = doc.sections[0]
     sec.page_width  = Inches(8.5); sec.page_height = Inches(11)
@@ -447,6 +496,47 @@ def build_docx(resolved_first, m_first, m_last, history, out_path):
                 _borders(c)
         _set_widths(rv_t, rv_widths)
 
+    # ── Closed positions — full disclosure ──────────────────────────────────
+    if closed:
+        _heading(doc, "Closed Positions")
+        p_cl = doc.add_paragraph()
+        p_cl.paragraph_format.space_after = Pt(6)
+        _run(p_cl, "Contracts AFG exited before resolution. A subscriber following "
+                   "AFG held no position at settlement. The First-Call track above "
+                   "still scores the original call; the Updated-Position track "
+                   "excludes these. Shown here with the outcome so the record is "
+                   "complete.", size=9, italic=True, color=GRAY)
+
+        cl_headers = ["Market", "Original Call", "Closed", "Outcome", "Original Call Would Have"]
+        cl_widths  = [3200, 1700, 1400, 1400, 3100]  # = 10800
+        cl_t = doc.add_table(rows=1, cols=len(cl_headers))
+        for i, h in enumerate(cl_headers):
+            c = cl_t.rows[0].cells[i]; c.text = ""
+            cp = c.paragraphs[0]
+            cp.paragraph_format.space_before = Pt(4); cp.paragraph_format.space_after = Pt(4)
+            _run(cp, h, size=9.5, bold=True, color=NAVY)
+            _shade(c, HEADER_FILL); _borders(c)
+
+        for cpos in closed:
+            row = cl_t.add_row()
+            hit = cpos["would_have_hit"]
+            call_col = GREEN if cpos["first_call"] == "BUY YES" else RED
+            out_txt  = {1: "YES", 0: "NO"}.get(cpos["outcome"], "—")
+            vals = [
+                (cpos["market"][:34], NAVY, False),
+                (f"{cpos['first_call']} @ {cpos['first_prob']:.0%}", call_col, True),
+                (str(cpos["closed_date"] or "—"), GRAY, False),
+                (out_txt, NAVY, True),
+                ("been Correct" if hit else "been Incorrect", GREEN if hit else RED, True),
+            ]
+            for i, (val, col, bold) in enumerate(vals):
+                c = row.cells[i]; c.text = ""
+                cp = c.paragraphs[0]
+                cp.paragraph_format.space_before = Pt(3); cp.paragraph_format.space_after = Pt(3)
+                _run(cp, val, size=9, bold=bold, color=col)
+                _borders(c)
+        _set_widths(cl_t, cl_widths)
+
     # footnote
     p_fn = doc.add_paragraph()
     p_fn.paragraph_format.space_before = Pt(16)
@@ -459,11 +549,12 @@ def build_docx(resolved_first, m_first, m_last, history, out_path):
 
 # ── Website ───────────────────────────────────────────────────────────────────
 
-def build_website(resolved, m, out_dir, m_last=None, history=None):
+def build_website(resolved, m, out_dir, m_last=None, history=None, closed=None):
     os.makedirs(out_dir, exist_ok=True)
     updated = date.today().strftime("%B %d, %Y")
     year    = date.today().year
     history = history or []
+    closed = closed or []
 
     if m is None:
         body = """
@@ -615,6 +706,42 @@ def build_website(resolved, m, out_dir, m_last=None, history=None):
         </div>
       </section>"""
 
+        closed_rows = ""
+        for cpos in closed:
+            hit = cpos["would_have_hit"]
+            call_cls = "good" if cpos["first_call"] == "BUY YES" else "bad"
+            out_txt  = {1: "YES", 0: "NO"}.get(cpos["outcome"], "—")
+            hit_cls  = "good" if hit else "bad"
+            closed_rows += f"""
+          <tr>
+            <td>{cpos['market'][:52]}</td>
+            <td class="{call_cls}">{cpos['first_call']} @ {cpos['first_prob']:.0%}</td>
+            <td>{cpos['closed_date'] or '—'}</td>
+            <td>{out_txt}</td>
+            <td class="{hit_cls} result-cell">would have been {'Correct' if hit else 'Incorrect'}</td>
+          </tr>"""
+
+        closed_section = ""
+        if closed_rows:
+            closed_section = f"""
+      <section>
+        <h2>Closed Positions</h2>
+        <p class="tracks-note">Contracts AFG exited before resolution — no live recommendation at settlement.
+           The First-Call track still scores the original call; Updated-Position excludes these.
+           Shown with outcomes so the record stays complete.</p>
+        <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Market</th><th>Original Call</th><th>Closed</th>
+              <th>Outcome</th><th>Original Call Would Have</th>
+            </tr>
+          </thead>
+          <tbody>{closed_rows}</tbody>
+        </table>
+        </div>
+      </section>"""
+
         body = f"""
       {tracks}
 
@@ -634,6 +761,7 @@ def build_website(resolved, m, out_dir, m_last=None, history=None):
         </table>
       </section>
       {reversals_section}
+      {closed_section}
 
       <section>
         <h2>Recent Resolved Forecasts</h2>
@@ -987,17 +1115,21 @@ def main():
     resolved_first = load_resolved(mode="first")
     resolved_last  = load_resolved(mode="last")
     history        = load_position_history()
+    closed         = load_closed_positions()
     m_first = compute_metrics(resolved_first)
     m_last  = compute_metrics(resolved_last)
 
+    if closed:
+        print(f"  Closed positions: {len(closed)} contract(s) AFG exited before "
+              f"resolution — excluded from Updated-Position, disclosed separately.")
     n_reversals = sum(1 for h in history if h["reversed"])
     if n_reversals:
         print(f"  Position changes: {n_reversals} market(s) where AFG's call "
               f"reversed before resolution. Both tracks shown in the scorecard.")
 
     docx_path = f"{DOCX_DIR}/AFG_Scorecard_{date.today().isoformat()}.docx"
-    build_docx(resolved_first, m_first, m_last, history, docx_path)
-    build_website(resolved_first, m_first, WEB_DIR, m_last=m_last, history=history)
+    build_docx(resolved_first, m_first, m_last, history, closed, docx_path)
+    build_website(resolved_first, m_first, WEB_DIR, m_last=m_last, history=history, closed=closed)
     post_path = f"{DOCX_DIR}/AFG_Resolution_Post_{date.today().isoformat()}.txt"
     build_resolution_post(resolved_first, m_first, post_path)
 
