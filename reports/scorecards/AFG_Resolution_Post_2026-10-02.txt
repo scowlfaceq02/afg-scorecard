@@ -4,16 +4,16 @@ Paste below into X/Twitter. Attach a screenshot of the
 Forecast Accuracy Index dashboard.
 ============================================================
 
-RESOLVED — Fed decision in September — Maintains rate
+RESOLVED — Big Brother S28 Winner — Drew Campbell
 
-Kalshi had it at 64%. AFG said 76% and called BUY YES.
-Settled NO. Wrong.
+Kalshi had it at 39%. AFG said 32% and called BUY NO.
+Settled NO. Correct.
 
-Record: 5-2 (71%). AFG leads the market 0.197 to 0.211 on Brier score across 7 resolved forecasts.
+Record: 8-3 (73%). AFG leads the market 0.174 to 0.181 on Brier score across 11 resolved forecasts.
 
 Full index: https://scowlfaceq02.github.io/afg-scorecard/
 
 #PredictionMarkets #Kalshi
 
 ============================================================
-Character count: 315
+Character count: 313
