@@ -40,6 +40,16 @@ WEB_DIR        = "docs"
 
 # ── data ─────────────────────────────────────────────────────────────────────
 
+def _rd(value):
+    """Parse a report/close date for ORDERING. Dates in the database have been
+    stored as both ISO (2026-08-07) and US (7/21/2026). Compared as text,
+    '2026-08-07' sorts before '7/21/2026', which would make a later call look
+    like the first call. Always order by parsed date, never by string."""
+    import datetime
+    from db import _parse_date
+    return _parse_date(value) or datetime.date.min
+
+
 def load_resolved(mode="first"):
     """
     Loads resolved predictions, deduplicated by kalshi_ticker.
@@ -85,8 +95,8 @@ def load_resolved(mode="first"):
             calls[key] = r
         else:
             duplicates_dropped += 1
-            r_date  = str(r.get("report_date") or "")
-            ex_date = str(existing.get("report_date") or "")
+            r_date  = _rd(r.get("report_date"))
+            ex_date = _rd(existing.get("report_date"))
             if mode == "first":
                 if r_date < ex_date:
                     calls[key] = r
@@ -96,7 +106,7 @@ def load_resolved(mode="first"):
 
     deduped = sorted(
         calls.values(),
-        key=lambda x: str(x.get("contract_close_date") or ""),
+        key=lambda x: _rd(x.get("contract_close_date")),
         reverse=True,
     )
 
@@ -126,7 +136,7 @@ def load_position_history():
 
     history = []
     for key, calls in by_ticker.items():
-        calls.sort(key=lambda x: str(x.get("report_date") or ""))
+        calls.sort(key=lambda x: _rd(x.get("report_date")))
         first, last = calls[0], calls[-1]
         reversed_ = first.get("recommendation") != last.get("recommendation")
         history.append({
@@ -163,7 +173,7 @@ def load_closed_positions():
 
     closed = []
     for key, calls in by_ticker.items():
-        calls.sort(key=lambda x: str(x.get("report_date") or ""))
+        calls.sort(key=lambda x: _rd(x.get("report_date")))
         first = calls[0]
         closed.append({
             "market":        first["market"],
