@@ -400,7 +400,12 @@ def build_docx(df, sections, contrarian_rows, report_date, output_path):
     add_body_paragraph(doc, sections.get("Executive Summary", ""))
 
     # Executive Dashboard stats, computed from the approved predictions
-    n_published = len(df)
+    # Count screened Kalshi EVENTS, not rows: two strikes of one event (e.g. two
+    # Hormuz dates, two Bond actors) are one screened market, so counting rows
+    # would understate the number of markets excluded.
+    _events = df["kalshi_ticker"].astype(str).map(
+        lambda t: t.rsplit("-", 1)[0] if t.count("-") >= 2 else t)
+    n_published = min(25, _events.nunique())
     n_actionable = int((df["edge_score"].abs() >= 0.03).sum())
     n_high = int((df["conviction"].str.upper() == "HIGH").sum())
     excluded_note = sections.get("Publication Note", "")

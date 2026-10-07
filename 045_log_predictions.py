@@ -17,7 +17,8 @@ import sqlite3
 import pandas as pd
 
 import db
-from afg_logging_rules import ensure_columns, normalize_dates, process_cycle
+from afg_logging_rules import (ensure_columns, normalize_dates, process_cycle,
+                               canonicalize_db_tickers)
 
 APPROVED_CSV = "data/approved_predictions.csv"
 
@@ -36,6 +37,8 @@ def main():
     conn.row_factory = sqlite3.Row
     ensure_columns(conn)
     normalize_dates(conn)
+    for old, new, n in canonicalize_db_tickers(conn):
+        print(f"  Ticker corrected: {old} -> {new} ({n} row(s))")
     events = []
     process_cycle(conn, report_date, df.to_dict("records"), events)
     conn.commit()
