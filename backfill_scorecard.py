@@ -45,9 +45,17 @@ from afg_logging_rules import (canon, direction, ensure_columns, normalize_dates
 HISTORY_CSV = "afg_backfill_history.csv"
 EXCLUDED_DATES = {"2026-07-18", "2026-09-07"}
 
+# Withdrawals AFG published for contracts that were NOT in that cycle's pull,
+# so no NO TRADE row exists in the history to close them. Applied after replay.
+MANUAL_CLOSURES = {
+    "KXHURCTOTMAJ-26DEC01-0": ("2026-10-07",
+        "Withdrawn: Isaias forecast to rapidly intensify; thesis no longer applies"),
+}
+
 # Rows inserted by hand on 2 October with estimated values; corrected to the
 # true first published call.
 MANUAL_BB_TICKERS = {
+    "KXBIGBROTHER-26DEC31-DV",
     "KXBIGBROTHER-26DEC31-RIC",
     "KXBIGBROTHER-26DEC31-YAS",
     "KXBIGBROTHER-26DEC31-DRE",
@@ -62,14 +70,17 @@ def correct_manual_bb_rows(conn, history, events):
             continue
         first = h.sort_values("report_date").iloc[0]
         row = conn.execute(
-            "SELECT id, report_date, outcome FROM predictions "
-            "WHERE kalshi_ticker=? AND status='Resolved' ORDER BY id LIMIT 1",
-            (ticker,)).fetchone()
+            "SELECT id, report_date, outcome, afg_probability, kalshi_price, brier_score "
+            "FROM predictions WHERE kalshi_ticker=? AND status='Resolved' "
+            "ORDER BY report_date, id LIMIT 1", (ticker,)).fetchone()
         if row is None or row["outcome"] is None:
             continue
-        if row["report_date"] == first["report_date"]:
-            continue
         afg_p, kal_p, o = float(first["afg_probability"]), float(first["kalshi_price"]), int(row["outcome"])
+        target = (first["report_date"], round(afg_p, 4), round(kal_p, 4), round((afg_p - o) ** 2, 4))
+        current = (row["report_date"], round(float(row["afg_probability"] or -1), 4),
+                   round(float(row["kalshi_price"] or -1), 4), round(float(row["brier_score"] or -1), 4))
+        if current == target:
+            continue
         conn.execute(
             """UPDATE predictions SET report_date=?, kalshi_price=?, afg_probability=?,
                edge_score=?, conviction=?, recommendation=?, brier_score=?,
@@ -90,15 +101,42 @@ def run(db_path, history):
     n_dates = normalize_dates(conn)
     renames = canonicalize_db_tickers(conn)
 
-    before = conn.execute("SELECT COUNT(*) FROM predictions WHERE status!='Void'").fetchone()[0]
+    before = conn.execute(
+        "SELECT COUNT(*) FROM predictions WHERE status IN ('Open','Resolved')").fetchone()[0]
+
+    # Set aside existing OPEN rows for every contract in the published history
+    # that has not resolved. Those rows were written by the old logger, which
+    # kept only some calls and could hold a later call than the first one.
+    # Replaying history on top of them produced false reversals (Odyssey).
+    # Rebuilding from the published record is the only reliable source.
+    # Resolved rows are never touched. Superseded rows are kept for audit.
+    superseded = 0
+    for ticker in sorted(history["kalshi_ticker"].dropna().unique()):
+        resolved = conn.execute(
+            "SELECT 1 FROM predictions WHERE kalshi_ticker=? AND status='Resolved' LIMIT 1",
+            (ticker,)).fetchone()
+        if resolved:
+            continue
+        superseded += conn.execute(
+            "UPDATE predictions SET status='Superseded' WHERE kalshi_ticker=? AND status='Open'",
+            (ticker,)).rowcount
+    events.append(("superseded", None, None, superseded))
 
     for report_date, cycle in history.groupby("report_date", sort=True):
         process_cycle(conn, report_date, cycle.to_dict("records"), events)
 
+    for ticker, (cdate, reason) in MANUAL_CLOSURES.items():
+        n = conn.execute(
+            "UPDATE predictions SET afg_closed=1, afg_closed_date=?, afg_closed_reason=? "
+            "WHERE kalshi_ticker=? AND status='Open'", (cdate, reason, ticker)).rowcount
+        if n:
+            events.append(("closed", ticker, "manual withdrawal", f"closed {cdate}"))
+
     correct_manual_bb_rows(conn, history, events)
     conn.commit()
 
-    after = conn.execute("SELECT COUNT(*) FROM predictions WHERE status!='Void'").fetchone()[0]
+    after = conn.execute(
+        "SELECT COUNT(*) FROM predictions WHERE status IN ('Open','Resolved')").fetchone()[0]
     stats = {
         "open": conn.execute("SELECT COUNT(*) FROM predictions WHERE status='Open'").fetchone()[0],
         "resolved": conn.execute("SELECT COUNT(*) FROM predictions WHERE status='Resolved'").fetchone()[0],
@@ -117,6 +155,8 @@ def report(events, n_dates, renames, before, after, stats, applied):
     print(title)
     print("=" * 72)
     print(f"Dates converted to ISO format : {n_dates} row(s)")
+    sup = sum(e[3] for e in events if e[0] == "superseded")
+    print(f"Old open rows set aside       : {sup} (kept as 'Superseded' for audit)")
     print(f"Ticker spellings merged       : {sum(n for _, _, n in renames)} row(s)")
     for old, new, n in renames:
         print(f"    {old}  ->  {new}  ({n})")
@@ -127,6 +167,13 @@ def report(events, n_dates, renames, before, after, stats, applied):
     print(f"Big Brother rows corrected    : {kinds['bbfix']}")
     print(f"Warnings                      : {kinds['warn']}")
     print(f"Active rows before / after    : {before} / {after}")
+    rev_counts = Counter(e[1] for e in events if e[0] == "reversal")
+    dup = {t: n for t, n in rev_counts.items() if n > 2}
+    if dup:
+        print("\n*** STOP: a contract shows more than two reversals — do not apply. "
+              "Paste this output into the chat. ***")
+        for t, n in dup.items():
+            print(f"    {t}: {n} reversals")
 
     section = {"first": "FIRST CALLS ADDED", "reversal": "REVERSALS ADDED",
                "reopen": "REOPENED", "bbfix": "BIG BROTHER CORRECTIONS", "warn": "WARNINGS"}

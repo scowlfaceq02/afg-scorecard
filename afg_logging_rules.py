@@ -25,9 +25,11 @@ RULES (applied per contract, in report-date order)
   5. SAME DIRECTION Repeating an existing open call logs nothing new.
   6. RESOLVED       Contracts already resolved in the database are never
                     modified by these rules.
-  7. VOID           Rows marked Void are ignored. If a contract exists only as
-                    Void rows, nothing is inserted and a warning is printed,
-                    because those rows were voided deliberately.
+  8. SUPERSEDED     Rows set aside by the backfill (status 'Superseded') are
+                    invisible to these rules and to the scorecard, but kept in
+                    the database for audit.
+  7. VOID           Rows marked Void (duplicate copies removed in July 2026)
+                    are invisible to these rules and never block logging.
 """
 
 import datetime
@@ -125,7 +127,8 @@ def canonicalize_db_tickers(conn):
 def _rows_for(conn, ticker):
     return conn.execute(
         "SELECT id, status, recommendation, report_date, "
-        "COALESCE(afg_closed, 0) AS afg_closed FROM predictions WHERE kalshi_ticker=?",
+        "COALESCE(afg_closed, 0) AS afg_closed FROM predictions "
+        "WHERE kalshi_ticker=? AND status NOT IN ('Superseded', 'Void')",
         (ticker,),
     ).fetchall()
 
@@ -166,10 +169,6 @@ def process_cycle(conn, report_date, rows, events):
 
         if rec in ("BUY YES", "BUY NO"):
             if not live:
-                if all_rows:  # only Void rows exist
-                    events.append(("warn", ticker, r["market"],
-                                   "exists only as Void rows — not logged"))
-                    continue
                 _insert(conn, r, ticker, report_date)
                 events.append(("first", ticker, r["market"],
                                f"{report_date} {rec} @ {float(r['afg_probability']):.0%}"))
