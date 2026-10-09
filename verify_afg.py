@@ -145,17 +145,28 @@ try:
           f"Missing: {[r[0] for r in null_brier]}" if null_brier else
           "Null scores cause scorecard rows to be silently dropped.")
 
-    # Duplicate open tickers
+    # Duplicate open rows. Since October 2026 a contract may legitimately
+    # hold several Open rows (first call + reversal, or a reopened position).
+    # A TRUE duplicate is the same call logged twice: same ticker, same
+    # report date, same recommendation.
     with get_conn() as conn:
-        dup_tickers = conn.execute(
-            """SELECT kalshi_ticker, COUNT(*) as n FROM predictions
+        dup_rows = conn.execute(
+            """SELECT kalshi_ticker, report_date, recommendation, COUNT(*) as n
+               FROM predictions
                WHERE status='Open' AND kalshi_ticker IS NOT NULL
-               GROUP BY kalshi_ticker HAVING n > 1"""
+               GROUP BY kalshi_ticker, report_date, recommendation HAVING n > 1"""
         ).fetchall()
-    check("No duplicate tickers in Open predictions",
-          len(dup_tickers) == 0,
-          f"{len(dup_tickers)} ticker(s) with duplicates — run fix_duplicate_open_rows.py"
-          if dup_tickers else "", is_warning=len(dup_tickers) > 0)
+        multi = conn.execute(
+            """SELECT COUNT(*) FROM (SELECT kalshi_ticker FROM predictions
+               WHERE status='Open' AND kalshi_ticker IS NOT NULL
+               GROUP BY kalshi_ticker HAVING COUNT(*) > 1)"""
+        ).fetchone()[0]
+    check("No duplicate calls in Open predictions",
+          len(dup_rows) == 0,
+          (f"{len(dup_rows)} call(s) logged twice — run fix_duplicate_open_rows.py (preview first)"
+           if dup_rows else
+           f"{multi} contract(s) carry more than one Open row by design (reversals/reopened positions)."),
+          is_warning=len(dup_rows) > 0)
 
 except Exception as e:
     check("Database checks", False, str(e))
@@ -182,8 +193,14 @@ if os.path.exists("06_build_scorecard.py"):
 print("\n=== 7. PREDICTION LOGGER ===")
 if os.path.exists("045_log_predictions.py"):
     src045 = open("045_log_predictions.py", encoding="utf-8").read()
-    check("045 deduplicates by ticker",
-          "already_logged_tickers" in src045 or "kalshi_ticker" in src045)
+    rules = (open("afg_logging_rules.py", encoding="utf-8").read()
+             if os.path.exists("afg_logging_rules.py") else "")
+    check("045 uses the shared logging rules (afg_logging_rules.py)",
+          "afg_logging_rules" in src045 and "process_cycle" in src045,
+          "045 must import process_cycle from afg_logging_rules.py.")
+    check("Logging rules check existing rows by ticker before inserting",
+          "def _rows_for" in rules and "WHERE kalshi_ticker=?" in rules,
+          "Repeat calls in the same direction are not logged twice.")
 
 # ── 8. GitHub Pages ──────────────────────────────────────────────────────────
 print("\n=== 8. GITHUB PAGES ===")

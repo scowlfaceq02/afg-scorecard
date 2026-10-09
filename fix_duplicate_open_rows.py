@@ -1,59 +1,61 @@
 """
-fix_duplicate_open_rows.py — keeps only the EARLIEST Open prediction
-per kalshi_ticker, deletes all later duplicates.
+fix_duplicate_open_rows.py — removes TRUE duplicate Open rows only.
 
-This is safe: the scorecard already applies first-call-only dedup at
-read time, so these extra rows are harmless clutter — but cleaning them
-prevents 045_log_predictions.py from accumulating more in future cycles.
+Since the October 2026 logging rules, one contract can legitimately carry
+more than one Open row:
+  * the first call plus a later reversal (opposite direction), and
+  * a first call plus a reopened call after AFG closed the position.
+Both tracks of the Forecast Accuracy Index and the Position Changes table
+depend on those rows, so they must NEVER be voided.
 
-Run:
+A true duplicate is the same call recorded twice: same ticker, same
+report date and same recommendation. This script keeps the earliest row
+(lowest id) of each such group and marks the rest Void.
+
+The previous version of this script voided every Open row after the first
+for each ticker. Running that version now would delete reversals and
+reopened positions from the scorecard.
+
+Run (preview first, then apply):
     python3 fix_duplicate_open_rows.py
+    python3 fix_duplicate_open_rows.py --apply
 """
+
+import sys
 
 from db import get_conn
 
+DUP_SQL = """
+    SELECT kalshi_ticker, report_date, recommendation, COUNT(*) AS n,
+           MIN(id) AS keep_id
+    FROM predictions
+    WHERE status='Open' AND kalshi_ticker IS NOT NULL
+    GROUP BY kalshi_ticker, report_date, recommendation
+    HAVING n > 1
+"""
+
 
 def main():
+    apply = "--apply" in sys.argv
     with get_conn() as conn:
-        # Find all tickers with more than one Open row
-        dups = conn.execute(
-            """SELECT kalshi_ticker, COUNT(*) as n
-               FROM predictions
-               WHERE status='Open' AND kalshi_ticker IS NOT NULL
-               GROUP BY kalshi_ticker HAVING n > 1"""
-        ).fetchall()
-
-        if not dups:
-            print("No duplicate Open rows found. Nothing to do.")
+        groups = conn.execute(DUP_SQL).fetchall()
+        if not groups:
+            print("No true duplicate Open rows found. Nothing to do.")
             return
-
-        print(f"Found {len(dups)} ticker(s) with duplicates:")
-        total_deleted = 0
-
-        for ticker, count in dups:
-            # Get all Open rows for this ticker, oldest first
-            rows = conn.execute(
-                """SELECT id, report_date FROM predictions
-                   WHERE status='Open' AND kalshi_ticker=?
-                   ORDER BY report_date ASC""",
-                (ticker,)
-            ).fetchall()
-
-            # Keep the first (earliest), delete the rest
-            keep_id = rows[0][0]
-            delete_ids = [r[0] for r in rows[1:]]
-
-            conn.execute(
-                f"UPDATE predictions SET status='Void' WHERE id IN "
-                f"({','.join('?' for _ in delete_ids)})",
-                delete_ids
-            )
-            total_deleted += len(delete_ids)
-            print(f"  {ticker}: kept id={keep_id}, voided {len(delete_ids)} duplicate(s)")
-
-        conn.commit()
-        print(f"\nDone. {total_deleted} duplicate Open rows voided.")
-        print("Run python3 verify_afg.py to confirm clean.")
+        print(f"Found {len(groups)} true duplicate group(s):")
+        total = 0
+        for ticker, rdate, rec, n, keep_id in groups:
+            print(f"  {ticker:38s} {rdate}  {rec:8s}  {n} rows (keeping id {keep_id})")
+            if apply:
+                total += conn.execute(
+                    "UPDATE predictions SET status='Void' WHERE status='Open' "
+                    "AND kalshi_ticker=? AND report_date=? AND recommendation=? AND id<>?",
+                    (ticker, rdate, rec, keep_id)).rowcount
+        if apply:
+            conn.commit()
+            print(f"Voided {total} duplicate row(s).")
+        else:
+            print("\nPreview only. To apply:  python3 fix_duplicate_open_rows.py --apply")
 
 
 if __name__ == "__main__":
