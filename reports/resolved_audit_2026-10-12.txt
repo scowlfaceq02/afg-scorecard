@@ -1,0 +1,124 @@
+AFG RESOLVED-CONTRACT AUDIT — 2026-10-12 — 25 resolved contracts (read-only)
+====================================================================================================
+
+FEDHIKE-26DEC31   outcome=YES   [OK]
+    published : 2026-07-21 BUY NO  AFG 45% vs 62% | 2026-08-14 BUY NO  AFG 50% vs 54% | 2026-08-21 BUY NO  AFG 48% vs 51% | 2026-08-31 BUY YES AFG 80% vs 77%   [closed]
+    database  : 2026-07-21 BUY NO  AFG 45% vs 62% | 2026-08-14 BUY NO  AFG 50% vs 54% | 2026-08-21 BUY NO  AFG 48% vs 51% | 2026-08-31 BUY YES AFG 80% vs 77%   [closed]
+    hidden    : id 9 Superseded 2026-07-21 BUY NO  AFG 45% vs 62% | id 28 Void 2026-07-22 BUY NO  AFG 52% vs 64% | id 46 Void 2026-07-24 BUY NO  AFG 58% vs 72% | id 65 Void 2026-07-27 BUY NO  AFG 54% vs 66% | id 82 Void 2026-07-31 BUY NO  AFG 55% vs 68%
+
+KXATP-26USO-ALC   outcome=NO   [OK]
+    published : 2026-08-31 BUY YES AFG 33% vs 29%   [closed]
+    database  : 2026-08-31 BUY YES AFG 33% vs 29%   [closed]
+    hidden    : id 110 Superseded 2026-08-31 BUY YES AFG 33% vs 29%
+
+KXBIGBROTHER-26DEC31-DEE   outcome=NO   [OK]
+    published : 2026-07-27 BUY NO  AFG 15% vs 19% | 2026-08-24 BUY NO  AFG 24% vs 29% | 2026-09-11 BUY NO  AFG 22% vs 25%
+    database  : 2026-07-27 BUY NO  AFG 15% vs 19% | 2026-08-24 BUY NO  AFG 24% vs 29% | 2026-09-11 BUY NO  AFG 22% vs 25%
+    hidden    : id 91 Void 2026-07-27 BUY NO  AFG 15% vs 19%
+
+KXBIGBROTHER-26DEC31-DRE   outcome=NO   [OK]
+    published : 2026-09-23 BUY NO  AFG 32% vs 39%
+    database  : 2026-09-23 BUY NO  AFG 32% vs 39%
+    hidden    : id 130 Void 2026-09-25 BUY NO  AFG 32% vs 39%
+
+KXBIGBROTHER-26DEC31-RIC   outcome=YES   [OK]
+    published : 2026-09-18 BUY NO  AFG 30% vs 37%
+    database  : 2026-09-18 BUY NO  AFG 30% vs 37%
+    hidden    : id 129 Void 2026-09-28 BUY NO  AFG 42% vs 51%
+
+KXBIGBROTHER-26DEC31-YAS   outcome=NO   [OK]
+    published : 2026-09-02 BUY NO  AFG 22% vs 26% | 2026-09-09 BUY NO  AFG 22% vs 28%
+    database  : 2026-09-02 BUY NO  AFG 22% vs 26% | 2026-09-09 BUY NO  AFG 22% vs 28%
+
+KXBLANCHEJUDICIARY-27-26OCT01   outcome=YES   [OK]
+    published : 2026-07-31 BUY NO  AFG 52% vs 61%
+    database  : 2026-07-31 BUY NO  AFG 52% vs 61%
+    hidden    : id 87 Superseded 2026-07-31 BUY NO  AFG 52% vs 61%
+
+KXDROUGHTLEVEL-26JULLD4-OR   outcome=NO   [OK]
+    published : 2026-07-21 BUY NO  AFG 38% vs 43% | 2026-07-27 BUY YES AFG 72% vs 39%
+    database  : 2026-07-21 BUY NO  AFG 38% vs 43% | 2026-07-27 BUY YES AFG 72% vs 39%
+    hidden    : id 38 Void 2026-07-22 BUY NO  AFG 34% vs 37% | id 57 Void 2026-07-24 BUY NO  AFG 24% vs 29%
+
+KXEARTHQUAKEM-26AUG-78   outcome=YES   [OK]
+    published : 2026-08-19 BUY NO  AFG 5% vs 15%
+    database  : 2026-08-19 BUY NO  AFG 5% vs 15%
+    hidden    : id 108 Superseded 2026-08-19 BUY NO  AFG 5% vs 15%
+
+KXFEDDECISION-26JUL-H0   outcome=YES   [OK]
+    published : 2026-07-21 BUY YES AFG 93% vs 86%
+    database  : 2026-07-21 BUY YES AFG 93% vs 86%
+    hidden    : id 25 Void 2026-07-22 BUY YES AFG 82% vs 76% | id 43 Void 2026-07-24 BUY YES AFG 84% vs 75% | id 62 Void 2026-07-27 BUY YES AFG 86% vs 75%
+
+KXFEDDECISION-26SEP-H0   outcome=NO   [OK]
+    published : 2026-08-07 BUY YES AFG 76% vs 64%   [closed]
+    database  : 2026-08-07 BUY YES AFG 76% vs 64%   [closed]
+
+KXFIRSTHURRICANE-26DEC01ATL-FAY   outcome=NO   [OK]
+    published : 2026-09-18 BUY NO  AFG 28% vs 37%
+    database  : 2026-09-18 BUY NO  AFG 28% vs 37%
+    hidden    : id 118 Superseded 2026-09-18 BUY NO  AFG 28% vs 37%
+
+KXFIRSTHURRICANE-26DEC01ATL-GON   outcome=NO   [OK]
+    published : 2026-09-21 BUY NO  AFG 25% vs 29%
+    database  : 2026-09-21 BUY NO  AFG 25% vs 29%
+    hidden    : id 120 Superseded 2026-09-21 BUY NO  AFG 25% vs 29%
+
+KXFIRSTHURRICANE-26DEC01ATL-HAN   outcome=NO   [OK]
+    published : 2026-09-25 BUY NO  AFG 25% vs 30%
+    database  : 2026-09-25 BUY NO  AFG 25% vs 30%
+    hidden    : id 123 Superseded 2026-09-25 BUY NO  AFG 25% vs 30%
+
+KXFIRSTHURRICANE-26DEC01ATL-ISA   outcome=YES   [OK]
+    published : 2026-09-28 BUY NO  AFG 30% vs 37%   [closed]
+    database  : 2026-09-28 BUY NO  AFG 30% vs 37%   [closed]
+    hidden    : id 126 Superseded 2026-09-28 BUY NO  AFG 30% vs 37%
+
+KXHMONTH-26JUL   outcome=NO   [OK]
+    published : 2026-08-10 BUY YES AFG 24% vs 16%   [closed]
+    database  : 2026-08-10 BUY YES AFG 24% vs 16%   [closed]
+    hidden    : id 100 Superseded 2026-08-10 BUY YES AFG 24% vs 16%
+
+KXNEXTAG-29-TBLA   outcome=YES   [OK]
+    published : 2026-07-31 BUY NO  AFG 55% vs 65% | 2026-08-07 BUY YES AFG 88% vs 81%
+    database  : 2026-07-31 BUY NO  AFG 55% vs 65% | 2026-08-07 BUY YES AFG 88% vs 81%
+
+KXNEXTTEAMNBA-26LJAM-CLE   outcome=NO   [OK]
+    published : 2026-07-21 BUY NO  AFG 28% vs 38%
+    database  : 2026-07-21 BUY NO  AFG 28% vs 38%
+
+KXNEXTTEAMNBA-26LJAM-MIA   outcome=NO   [OK]
+    published : 2026-07-22 BUY YES AFG 55% vs 48%
+    database  : 2026-07-22 BUY YES AFG 55% vs 48%
+    hidden    : id 39 Void 2026-07-24 BUY YES AFG 52% vs 45%
+
+KXPGATOUR-3MO26-SSCH   outcome=NO   [OK]
+    published : 2026-07-21 BUY NO  AFG 19% vs 26%
+    database  : 2026-07-21 BUY NO  AFG 19% vs 26%
+    hidden    : id 4 Superseded 2026-07-21 BUY NO  AFG 19% vs 26% | id 23 Void 2026-07-22 BUY NO  AFG 19% vs 26%
+
+KXPGATOUR-BMC26-SSCH   outcome=NO   [OK]
+    published : 2026-08-19 BUY NO  AFG 19% vs 23%
+    database  : 2026-08-19 BUY NO  AFG 19% vs 23%
+    hidden    : id 106 Superseded 2026-08-19 BUY NO  AFG 19% vs 23%
+
+KXPGATOUR-FESJC26-SSCH   outcome=YES   [OK]
+    published : 2026-08-12 BUY NO  AFG 13% vs 16%
+    database  : 2026-08-12 BUY NO  AFG 13% vs 16%
+    hidden    : id 102 Superseded 2026-08-12 BUY NO  AFG 13% vs 16%
+
+KXPGATOUR-TOC26-SSCH   outcome=YES   [OK]
+    published : 2026-08-26 BUY NO  AFG 18% vs 22%
+    database  : 2026-08-26 BUY NO  AFG 18% vs 22%
+    hidden    : id 109 Superseded 2026-08-26 BUY NO  AFG 18% vs 22%
+
+KXRT-SPI-90   outcome=NO   [OK]
+    published : 2026-07-31 BUY NO  AFG 50% vs 64%
+    database  : 2026-07-31 BUY NO  AFG 50% vs 64%
+
+KXRT-SPI-91   outcome=NO   [OK]
+    published : 2026-07-28 BUY NO  AFG 45% vs 55%
+    database  : 2026-07-28 BUY NO  AFG 45% vs 55%
+
+====================================================================================================
+CONTRACTS NEEDING REVIEW (0)

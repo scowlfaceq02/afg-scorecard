@@ -36,35 +36,91 @@ import datetime
 
 from db import _parse_date
 
-# ── Ticker spellings that refer to the same Kalshi contract ──────────────────
-# AFG reports used more than one spelling for several contracts. Every
-# spelling on the left is stored as the spelling on the right so that one
-# position is never split into two.
+# ── Ticker spellings → the real Kalshi contract code ─────────────────────────
+# AFG reports used more than one spelling for several contracts, and some
+# spellings were never real Kalshi codes. Every spelling on the left is stored
+# as the Kalshi code on the right, so one position is never split in two and
+# 05_update_scorecard.py can look every call up on Kalshi.
+#
+# Every target below was verified against Kalshi's raw API by audit_tickers.py
+# on 12 Oct 2026 (title and outcome matched the call's description).
+# Each left-hand spelling maps DIRECTLY to its final code (no chains).
 TICKER_ALIASES = {
-    "KXCLARITY-28JAN01":         "KXCRYPTOSTRUCTURE-28JAN01",
-    "KXCRYPTOSTRUCT-28JAN01":    "KXCRYPTOSTRUCTURE-28JAN01",
-    "KXGTA6":                    "KXGTA6-B2027",
-    "KXHORMUZNORM-26MAR17":      "KXHORMUZNORM-26MAR17-JAN27",
-    "KXLEADERSOUT-26-BN":        "KXLEADERSOUT-27JAN01-BN",
-    "KXBOND-30":                 "KXBOND-30-CT",
-    "KXRECESSION-26":            "KXRECSSNBER-26",
-    "KXALIENS-27":               "KXALIENS-27-JAN29",
-    "KXUSAIRANAGREEMENT-27":     "KXUSAIRANAGREEMENT-27-JAN29",
-    # Big Brother: Kalshi's real tickers use the first three letters of the name
-    "KXBIGBROTHER-26DEC31-RD":   "KXBIGBROTHER-26DEC31-RIC",
-    "KXBIGBROTHER-26DEC31-YP":   "KXBIGBROTHER-26DEC31-YAS",
-    "KXBIGBROTHER-26DEC31-DC":   "KXBIGBROTHER-26DEC31-DRE",
+    # Crypto market structure (Clarity Act), before Jan 1 2028
+    "KXCLARITY-28JAN01":               "KXCRYPTOSTRUCTURE-27JAN-28",
+    "KXCRYPTOSTRUCT-28JAN01":          "KXCRYPTOSTRUCTURE-27JAN-28",
+    "KXCRYPTOSTRUCTURE-28JAN01":       "KXCRYPTOSTRUCTURE-27JAN-28",
+    # GTA VI released before 2027 (Kalshi's code has no KX prefix)
+    "KXGTA6":                          "GTA6-26DEC31",
+    "KXGTA6-B2027":                    "GTA6-26DEC31",
+    # Hormuz: Kalshi strike codes are B<yymmdd>
+    "KXHORMUZNORM-26MAR17":            "KXHORMUZNORM-26MAR17-B270101",
+    "KXHORMUZNORM-26MAR17-JAN27":      "KXHORMUZNORM-26MAR17-B270101",
+    "KXHORMUZNORM-26MAR17-DEC26":      "KXHORMUZNORM-26MAR17-B261201",
+    "KXHORMUZNORM-26MAR17-APR27":      "KXHORMUZNORM-26MAR17-B270401",
+    "KXHORMUZNORM-26MAR17-JUL27":      "KXHORMUZNORM-26MAR17-B270701",
+    "KXHORMUZNORM-26MAR17-JAN28":      "KXHORMUZNORM-26MAR17-B280101",
+    # Leaders leaving office before Jan 1 2027
+    "KXLEADERSOUT-26-BN":              "KXLEADERSOUT-27JAN01-BNETISR",
+    "KXLEADERSOUT-27JAN01-BN":         "KXLEADERSOUT-27JAN01-BNETISR",
+    "KXLEADERSOUT-27JAN01-CL":         "KXLEADERSOUT-27JAN01-PLUXPMNZ",
+    # Next James Bond
+    "KXBOND-30":                       "KXBOND-30-CAL",
+    "KXBOND-30-CT":                    "KXBOND-30-CAL",
+    "KXBOND-30-JL":                    "KXBOND-30-JAC",
+    "KXBOND-30-JB":                    "KXBOND-30-JACK",
+    "KXRECESSION-26":                  "KXRECSSNBER-26",
+    # US confirms aliens exist, before Jan 20 2029
+    "KXALIENS-27":                     "KXALIENS-27-29",
+    "KXALIENS-27-JAN29":               "KXALIENS-27-29",
+    # US-Iran nuclear deal: TWO different strikes. The 21 July 2026 call was
+    # on "before Jan 1, 2028" (KXUSAIRANAGREEMENT-27-28); every later call was
+    # on "before Jan 20, 2029". The bare code KXUSAIRANAGREEMENT-27 was used
+    # for both strikes in July, so it is deliberately NOT aliased (corrected
+    # by hand in afg_backfill_history.csv on 12 Oct 2026).
+    "KXUSAIRANAGREEMENT-27-JAN29":     "KXUSAIRANAGREEMENT-27-29JAN20",
+    # Big Brother: Kalshi uses the first three letters of the name
+    "KXBIGBROTHER-26DEC31-RD":         "KXBIGBROTHER-26DEC31-RIC",
+    "KXBIGBROTHER-26DEC31-YP":         "KXBIGBROTHER-26DEC31-YAS",
+    "KXBIGBROTHER-26DEC31-DC":         "KXBIGBROTHER-26DEC31-DRE",
+    "KXBIGBROTHER-26DEC31-DV":         "KXBIGBROTHER-26DEC31-DEE",
     # First-hurricane names: Kalshi uses the first three letters of the name
-    # (verified: KXFIRSTHURRICANE-26DEC01ATL-ISA, KXHURRICANENAMES-...-ART)
     "KXFIRSTHURRICANE-26DEC01ATL-FY":  "KXFIRSTHURRICANE-26DEC01ATL-FAY",
     "KXFIRSTHURRICANE-26DEC01ATL-GZ":  "KXFIRSTHURRICANE-26DEC01ATL-GON",
     "KXFIRSTHURRICANE-26DEC01ATL-HN":  "KXFIRSTHURRICANE-26DEC01ATL-HAN",
     "KXFIRSTHURRICANE-26DEC01ATL-IS":  "KXFIRSTHURRICANE-26DEC01ATL-ISA",
-    # Major-hurricane count: Kalshi's strike suffix is T<n> (verified 9 Oct 2026:
-    # KXHURCTOTMAJ-26DEC01-T0 = "more than 0", -T1 = "more than 1")
-    "KXHURCTOTMAJ-26DEC01-0":  "KXHURCTOTMAJ-26DEC01-T0",
-    "KXHURCTOTMAJ-26DEC01-1":  "KXHURCTOTMAJ-26DEC01-T1",
+    # Major-hurricane count: Kalshi's strike suffix is T<n>
+    "KXHURCTOTMAJ-26DEC01-0":          "KXHURCTOTMAJ-26DEC01-T0",
+    "KXHURCTOTMAJ-26DEC01-1":          "KXHURCTOTMAJ-26DEC01-T1",
+    # Blanche AG nomination reported out of Judiciary before Oct 1 2026
+    "KXAGCOMMITTEE-26OCT01":           "KXBLANCHEJUDICIARY-27-26OCT01",
+    "KXATP-26USO-CA":                  "KXATP-26USO-ALC",
+    "KXDWTS-35-EF":                    "KXDANCINGWITHTHESTARS-26DEC31-EFRE",
+    "KXF1-26-ANT":                     "KXF1-26-KA",
+    # Fed hike by Dec 31 2026 (the market live in July; no KX prefix)
+    "KXFEDHIKE-B2027":                 "FEDHIKE-26DEC31",
+    "KXGAMEAWARDS-2026":               "KXGAMEAWARDS-2026-GTA",
+    # Hottest year: KXGTEMP-26 is the event; its one market is -P0
+    "KXGTEMP-26":                      "KXGTEMP-26-P0",
+    "KXHEISMAN-27-DM":                 "KXHEISMAN-27-DMENS",
+    "KXHEISMAN-27-JS":                 "KXHEISMAN-27-JSMIT",
+    "KXHEISMAN-27-TC":                 "KXHEISMAN-27-TCHAM",
+    "KXHIGHJULY-26":                   "KXHMONTH-26JUL",
+    "KXHURCHI-26":                     "KXHURPATHHAWAII-26DEC",
+    "KXNEXTAG-29-TB":                  "KXNEXTAG-29-TBLA",
+    "KXOSCARPIC-27":                   "KXOSCARPIC-27-ODY",
+    # Golf: four-letter player codes; the BMW Championship event is BMC26
+    "KXPGATOUR-3MO26-SCH":             "KXPGATOUR-3MO26-SSCH",
+    "KXPGATOUR-BMW26-SS":              "KXPGATOUR-BMC26-SSCH",
+    "KXPGATOUR-FESJC26-SS":            "KXPGATOUR-FESJC26-SSCH",
+    "KXPGATOUR-TOC26-SS":              "KXPGATOUR-TOC26-SSCH",
+    "KXQUAKEWORLD-26SEP01-78":         "KXEARTHQUAKEM-26AUG-78",
+    "KXRATECUTCOUNT-26DEC31":          "KXRATECUTCOUNT-26DEC31-T0",
+    "KXSAVEACT-27":                    "KXSAVEACT-27-JAN04",
 }
+
+# No target may itself be a left-hand spelling (that would need two passes).
+assert not set(TICKER_ALIASES.values()) & set(TICKER_ALIASES), "alias chain"
 
 
 def canon(ticker):

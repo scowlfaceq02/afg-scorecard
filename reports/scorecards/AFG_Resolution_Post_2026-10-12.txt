@@ -1,0 +1,19 @@
+AFG RESOLUTION POST — October 12, 2026
+============================================================
+Paste below into X/Twitter. Attach a screenshot of the
+Forecast Accuracy Index dashboard.
+============================================================
+
+RESOLVED — First Atlantic hurricane — Isaias
+
+Kalshi had it at 37%. AFG said 30% and called BUY NO.
+Settled YES. Wrong.
+
+Record: 13-12 (52%). AFG trails the market 0.249 to 0.230 on Brier score across 25 resolved forecasts.
+
+Full index: https://scowlfaceq02.github.io/afg-scorecard/
+
+#PredictionMarkets #Kalshi
+
+============================================================
+Character count: 310

@@ -195,7 +195,7 @@
     <div class="logo-rule"></div>
     <h1>AFG Forecast Accuracy Index</h1>
     <div class="sub">Axiom Forecasting Group · Prediction Markets Research</div>
-    <div class="updated">Last updated October 09, 2026</div>
+    <div class="updated">Last updated October 12, 2026</div>
   </header>
 
   <main>
@@ -207,18 +207,18 @@
           
         <div class="track-block">
           <div class="track-label">First-Call Accuracy (hardest test)</div>
-          <div class="track-score">12-4</div>
-          <div class="track-acc">75% accuracy</div>
-          <div class="track-brier">AFG Brier 0.184</div>
-          <div class="track-delta good">beats market by 0.012</div>
+          <div class="track-score">13-12</div>
+          <div class="track-acc">52% accuracy</div>
+          <div class="track-brier">AFG Brier 0.249</div>
+          <div class="track-delta bad">trails market by 0.019</div>
         </div>
           
         <div class="track-block">
           <div class="track-label">Updated-Position Accuracy</div>
-          <div class="track-score">12-3</div>
-          <div class="track-acc">80% accuracy</div>
-          <div class="track-brier">AFG Brier 0.145</div>
-          <div class="track-delta good">beats market by 0.025</div>
+          <div class="track-score">13-7</div>
+          <div class="track-acc">65% accuracy</div>
+          <div class="track-brier">AFG Brier 0.245</div>
+          <div class="track-delta bad">trails market by 0.015</div>
         </div>
         </div>
       </div>
@@ -226,36 +226,36 @@
       
       <div class="cards">
         <div class="card">
-          <div class="card-value">16</div>
+          <div class="card-value">25</div>
           <div class="card-label">Total Forecasts Issued</div>
         </div>
         <div class="card good-card">
-          <div class="card-value good">12</div>
+          <div class="card-value good">13</div>
           <div class="card-label">Correct Forecasts</div>
         </div>
         <div class="card bad-card">
-          <div class="card-value bad">4</div>
+          <div class="card-value bad">12</div>
           <div class="card-label">Incorrect Forecasts</div>
         </div>
         <div class="card">
-          <div class="card-value">75%</div>
+          <div class="card-value">52%</div>
           <div class="card-label">Overall Accuracy</div>
         </div>
         <div class="card">
-          <div class="card-value">0.184</div>
+          <div class="card-value">0.249</div>
           <div class="card-label">AFG Brier Score</div>
           <div class="card-sub">lower is better</div>
         </div>
         <div class="card muted-card">
-          <div class="card-value muted">0.196</div>
+          <div class="card-value muted">0.230</div>
           <div class="card-label">Market Brier Score</div>
           <div class="card-sub">the crowd's accuracy</div>
         </div>
       </div>
-      <p class="skill-line good">
-        AFG outperforms the Kalshi market by
-        <strong>0.012 Brier points</strong>
-        across 16 resolved forecasts (First-Call basis).
+      <p class="skill-line bad">
+        AFG trails the Kalshi market by
+        <strong>0.019 Brier points</strong>
+        across 25 resolved forecasts (First-Call basis).
       </p>
 
       <section>
@@ -271,27 +271,27 @@
           <tbody>
           <tr>
             <td class="cat-name">Sports</td>
-            <td>2</td>
-            <td class="good">1</td>
-            <td class="bad">1</td>
-            <td><strong>50%</strong></td>
-            <td class="good">0.190</td>
+            <td>7</td>
+            <td class="good">3</td>
+            <td class="bad">4</td>
+            <td><strong>43%</strong></td>
+            <td class="">0.284</td>
           </tr>
           <tr>
             <td class="cat-name">Economics</td>
-            <td>2</td>
+            <td>3</td>
             <td class="good">1</td>
-            <td class="bad">1</td>
-            <td><strong>50%</strong></td>
-            <td class="">0.296</td>
+            <td class="bad">2</td>
+            <td><strong>33%</strong></td>
+            <td class="">0.295</td>
           </tr>
           <tr>
             <td class="cat-name">Politics</td>
-            <td>1</td>
-            <td class="good">1</td>
-            <td class="bad">0</td>
-            <td><strong>100%</strong></td>
-            <td class="good">0.014</td>
+            <td>2</td>
+            <td class="good">0</td>
+            <td class="bad">2</td>
+            <td><strong>0%</strong></td>
+            <td class="good">0.216</td>
           </tr>
           <tr>
             <td class="cat-name">Culture</td>
@@ -303,15 +303,52 @@
           </tr>
           <tr>
             <td class="cat-name">Weather</td>
-            <td>5</td>
+            <td>7</td>
             <td class="good">4</td>
-            <td class="bad">1</td>
-            <td><strong>80%</strong></td>
-            <td class="good">0.168</td>
+            <td class="bad">3</td>
+            <td><strong>57%</strong></td>
+            <td class="">0.257</td>
           </tr></tbody>
         </table>
       </section>
       
+      <section>
+        <h2>Position Changes</h2>
+        <p class="tracks-note">Markets where AFG's call changed direction before resolution.
+           The First-Call track scores the original call; Updated-Position scores the "Last Call" shown here.</p>
+        <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Market</th><th>First Call</th><th>First Result</th>
+              <th>Last Call</th><th>Last Result</th>
+            </tr>
+          </thead>
+          <tbody>
+          <tr>
+            <td>Trump next Attorney General — Todd Blanche</td>
+            <td class="bad">BUY NO @ 55%</td>
+            <td class="bad result-cell">✗ Incorrect</td>
+            <td class="good">BUY YES @ 88%</td>
+            <td class="good result-cell">✓ Correct</td>
+          </tr>
+          <tr>
+            <td>Next Fed rate hike — Before 2027</td>
+            <td class="bad">BUY NO @ 45%</td>
+            <td class="bad result-cell">✗ Incorrect</td>
+            <td class="good">BUY YES @ 80%</td>
+            <td class="good result-cell">✓ Correct</td>
+          </tr>
+          <tr>
+            <td>Exceptional drought — Oregon</td>
+            <td class="bad">BUY NO @ 38%</td>
+            <td class="good result-cell">✓ Correct</td>
+            <td class="good">BUY YES @ 72%</td>
+            <td class="bad result-cell">✗ Incorrect</td>
+          </tr></tbody>
+        </table>
+        </div>
+      </section>
       
       <section>
         <h2>Closed Positions</h2>
@@ -328,9 +365,37 @@
           </thead>
           <tbody>
           <tr>
+            <td>First Atlantic hurricane — Isaias</td>
+            <td class="bad">BUY NO @ 30%</td>
+            <td>2026-10-07</td>
+            <td>YES</td>
+            <td class="bad result-cell">would have been Incorrect</td>
+          </tr>
+          <tr>
+            <td>Next Fed rate hike — Before 2027</td>
+            <td class="bad">BUY NO @ 45%</td>
+            <td>2026-09-11</td>
+            <td>YES</td>
+            <td class="bad result-cell">would have been Incorrect</td>
+          </tr>
+          <tr>
+            <td>US Open Men's Singles — Carlos Alcaraz</td>
+            <td class="good">BUY YES @ 33%</td>
+            <td>2026-09-02</td>
+            <td>NO</td>
+            <td class="bad result-cell">would have been Incorrect</td>
+          </tr>
+          <tr>
             <td>Fed decision in September — Maintains rate</td>
             <td class="good">BUY YES @ 76%</td>
             <td>2026-08-31</td>
+            <td>NO</td>
+            <td class="bad result-cell">would have been Incorrect</td>
+          </tr>
+          <tr>
+            <td>This July 2026 is the hottest July ever?</td>
+            <td class="good">BUY YES @ 24%</td>
+            <td>2026-08-12</td>
             <td>NO</td>
             <td class="bad result-cell">would have been Incorrect</td>
           </tr></tbody>
@@ -352,10 +417,10 @@
           <tr>
             <td>Trump next Attorney General — Todd Blanche</td>
             <td class="cat-badge">Politics</td>
-            <td>81%</td>
-            <td><strong>88%</strong></td>
+            <td>65%</td>
+            <td><strong>55%</strong></td>
             <td>YES</td>
-            <td class="good result-cell">✓ Correct</td>
+            <td class="bad result-cell">✗ Incorrect</td>
           </tr>
           <tr>
             <td>Spider-Man Brand New Day — RT score above 90</td>
@@ -438,6 +503,14 @@
             <td class="good result-cell">✓ Correct</td>
           </tr>
           <tr>
+            <td>Blanche AG nomination advances committee before Oct 1 2026?</td>
+            <td class="cat-badge">Politics</td>
+            <td>61%</td>
+            <td><strong>52%</strong></td>
+            <td>YES</td>
+            <td class="bad result-cell">✗ Incorrect</td>
+          </tr>
+          <tr>
             <td>Big Brother S28 Winner — Dee Valladares</td>
             <td class="cat-badge">Culture</td>
             <td>19%</td>
@@ -454,27 +527,51 @@
             <td class="bad result-cell">✗ Incorrect</td>
           </tr>
           <tr>
-            <td>Spider-Man Brand New Day — RT score above 91</td>
-            <td class="cat-badge">Culture</td>
-            <td>55%</td>
-            <td><strong>45%</strong></td>
-            <td>NO</td>
-            <td class="good result-cell">✓ Correct</td>
-          </tr>
-          <tr>
-            <td>Exceptional drought — Oregon</td>
-            <td class="cat-badge">Weather</td>
-            <td>43%</td>
-            <td><strong>38%</strong></td>
-            <td>NO</td>
-            <td class="good result-cell">✓ Correct</td>
-          </tr>
-          <tr>
-            <td>Fed decision in July — Maintains rate</td>
+            <td>Next Fed rate hike — Before 2027</td>
             <td class="cat-badge">Economics</td>
-            <td>86%</td>
-            <td><strong>93%</strong></td>
+            <td>62%</td>
+            <td><strong>45%</strong></td>
             <td>YES</td>
+            <td class="bad result-cell">✗ Incorrect</td>
+          </tr>
+          <tr>
+            <td>This July 2026 is the hottest July ever?</td>
+            <td class="cat-badge">Weather</td>
+            <td>16%</td>
+            <td><strong>24%</strong></td>
+            <td>NO</td>
+            <td class="bad result-cell">✗ Incorrect</td>
+          </tr>
+          <tr>
+            <td>US Open Men's Singles — Carlos Alcaraz</td>
+            <td class="cat-badge">Sports</td>
+            <td>29%</td>
+            <td><strong>33%</strong></td>
+            <td>NO</td>
+            <td class="bad result-cell">✗ Incorrect</td>
+          </tr>
+          <tr>
+            <td>Worldwide earthquake 7.8+ before Sep 1 2026?</td>
+            <td class="cat-badge">Weather</td>
+            <td>15%</td>
+            <td><strong>5%</strong></td>
+            <td>YES</td>
+            <td class="bad result-cell">✗ Incorrect</td>
+          </tr>
+          <tr>
+            <td>TOUR Championship Winner — Scottie Scheffler</td>
+            <td class="cat-badge">Sports</td>
+            <td>22%</td>
+            <td><strong>18%</strong></td>
+            <td>YES</td>
+            <td class="bad result-cell">✗ Incorrect</td>
+          </tr>
+          <tr>
+            <td>BMW Championship Winner — Scottie Scheffler</td>
+            <td class="cat-badge">Sports</td>
+            <td>23%</td>
+            <td><strong>19%</strong></td>
+            <td>NO</td>
             <td class="good result-cell">✓ Correct</td>
           </tr></tbody>
         </table>

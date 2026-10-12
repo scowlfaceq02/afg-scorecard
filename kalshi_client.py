@@ -52,8 +52,17 @@ def get_markets_by_series(series_ticker, status="open"):
 def get_market(ticker):
     """Full detail for a single market by its exact ticker. This is a precise
     resource lookup, not a filter, so it's reliable regardless of the /markets
-    listing quirks above."""
-    return _get(f"/markets/{ticker}").get("market", {})
+    listing quirks above.
+
+    Kalshi moves older settled markets to /historical/markets/<ticker>; the
+    live endpoint then returns 404 even though the ticker is correct (found
+    12 Oct 2026, e.g. KXFEDDECISION-26JUL-H0). Fall back to it on a 404."""
+    try:
+        return _get(f"/markets/{ticker}").get("market", {})
+    except requests.HTTPError as e:
+        if e.response is None or e.response.status_code != 404:
+            raise
+    return _get(f"/historical/markets/{ticker}").get("market", {})
 
 
 def get_market_status(ticker):
