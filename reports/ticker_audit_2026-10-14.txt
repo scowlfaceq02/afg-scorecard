@@ -1,0 +1,197 @@
+AFG TICKER AUDIT — 2026-10-14 — 64 contract codes, 95 rows (read-only)
+====================================================================================================
+
+FEDHIKE-26DEC31   [DB: 4 row(s), Resolved outcome=YES; first 2026-07-21 BUY NO] Next Fed rate hike — Before 2027
+    stored code   : finalized/yes  "Will the Federal Reserve hike rates by December 31, 2026?" [Before 2027]  settled 2026-09-16  (live)
+
+GTA6-26DEC31   [DB: 1 row(s), Open; first 2026-07-21 BUY NO] GTA VI release before 2027?
+    stored code   : active  "WIll GTA6 be released by Dec 31, 2026?" [Before 2027]  (live)
+
+KXALIENS-27-29   [DB: 1 row(s), Open; first 2026-07-21 BUY NO] U.S. confirms aliens exist before Jan 20 2029?
+    stored code   : active  "Will the U.S. confirm that aliens exist in 2029?" [Before Jan 20, 2029]  (live)
+
+KXATP-26USO-ALC   [DB: 1 row(s), Resolved outcome=NO; first 2026-08-31 BUY YES] US Open Men's Singles — Carlos Alcaraz
+    stored code   : finalized/no  "Will Carlos Alcaraz win the US Open Men's Singles?" [Carlos Alcaraz]  settled 2026-09-09  (live)
+
+KXBIGBROTHER-26DEC31-DEE   [DB: 3 row(s), Resolved outcome=NO; first 2026-07-27 BUY NO] Big Brother S28 Winner — Dee Valladares
+    stored code   : finalized/no  "Will Dee Valladares win Big Brother Season 28?" [Dee Valladares]  settled 2026-09-25  (live)
+
+KXBIGBROTHER-26DEC31-DRE   [DB: 1 row(s), Resolved outcome=NO; first 2026-09-23 BUY NO] Big Brother S28 Winner — Drew Campbell
+    stored code   : finalized/no  "Will Drew Campbell win Big Brother Season 28?" [Drew Campbell]  settled 2026-10-02  (live)
+
+KXBIGBROTHER-26DEC31-RIC   [DB: 1 row(s), Resolved outcome=YES; first 2026-09-18 BUY NO] Big Brother S28 Winner — Rick Devens
+    stored code   : finalized/yes  "Will Rick Devens win Big Brother Season 28?" [Rick Devens]  settled 2026-10-02  (live)
+
+KXBIGBROTHER-26DEC31-YAS   [DB: 2 row(s), Resolved outcome=NO; first 2026-09-02 BUY NO] Big Brother S28 Winner — Yash Patel
+    stored code   : finalized/no  "Will Yash Patel win Big Brother Season 28?" [Yash Patel]  settled 2026-09-25  (live)
+
+KXBLANCHEJUDICIARY-27-26OCT01   [DB: 1 row(s), Resolved outcome=YES; first 2026-07-31 BUY NO] Blanche AG nomination advances committee before Oct 1 2026?
+    stored code   : finalized/yes  "Will it be reported by any of the Source Agencies that the Senate Judiciary Committee reports Todd Blanche's nomination to be U.S. Attorney General to the full Senate before Oct 1, 2026?" [Before Oct 1, 2026]  settled 2026-08-04  (historical)
+
+KXBOND-30-CAL   [DB: 2 row(s), Open; first 2026-07-21 BUY NO] Next James Bond — Callum Turner
+    stored code   : active  "Will Callum Turner be the next James Bond?" [Callum Turner]  (live)
+
+KXBOND-30-JAC   [DB: 1 row(s), Open; first 2026-08-12 BUY NO] Next James Bond — Jack Lowden
+    stored code   : active  "Will Jack Lowden be the next James Bond?" [Jack Lowden]  (live)
+
+KXBOND-30-JACK   [DB: 1 row(s), Open; first 2026-09-02 BUY NO] Next James Bond — Jack Barton
+    stored code   : active  "Will Jack Barton be the next James Bond?" [Jack Barton]  (live)
+
+KXCITRINI-28JUL01   [DB: 1 row(s), Open; first 2026-07-21 BUY NO] Will the Citrini scenario happen?
+    stored code   : active  "Will the number of unemployment rate exceeds 10% (monthly BLS); S&P 500 declines more than 30% from its closing level on Issuance; Zillow Home Value Index declines more than 10% YoY in any of: NYC, LA, San Francisco, Chicago, Houston, Phoenix; labor share of gross domestic income (GDI) first-release value for any quarter falls below 50%; CPI-U (All items, not seasonally-adjusted) YoY falls below 0% in any monthly release during before July 2028 be above 2?" [Yes]  (live)
+
+KXCRYPTOSTRUCTURE-27JAN-28   [DB: 2 row(s), Open; first 2026-07-31 BUY NO] Crypto market structure law before Jan 1 2028?
+    stored code   : active  "Will crypto market structure legislation become law before Jan 1, 2028?" [Before Jan 1, 2028]  (live)
+
+KXDANCINGWITHTHESTARS-26DEC31-EFRE   [DB: 1 row(s), Open; first 2026-09-25 BUY NO] Dancing with the Stars S35 Winner — Ezra Frech
+    stored code   : active  "Will Ezra Frech win Dancing with the Stars Season 35?" [Ezra Frech]  (live)
+
+KXDROUGHTLEVEL-26JULLD4-OR   [DB: 2 row(s), Resolved outcome=NO; first 2026-07-21 BUY NO] Exceptional drought — Oregon
+    stored code   : finalized/no  "Will Oregon have a maximum drought category of at least D4 during June 4–July 30, 2026?" [Oregon]  settled 2026-08-04  (historical)
+
+KXEARTHQUAKECALIFORNIA-27   [DB: 4 row(s), Open; first 2026-07-21 BUY NO] CA 8.0+ earthquake before 2027?
+    stored code   : active  "Will there be an at least 8 magnitude earthquake in California before 2027?" [Before 2027]  (live)
+
+KXEARTHQUAKEM-26AUG-78   [DB: 1 row(s), Resolved outcome=YES; first 2026-08-19 BUY NO] Worldwide earthquake 7.8+ before Sep 1 2026?
+    stored code   : finalized/yes  "Will an earthquake of at least 7.8 magnitude occur worldwide before Sep 1, 2026?" [7.8+]  settled 2026-09-03  (live)
+
+KXF1-26-KA   [DB: 1 row(s), Open; first 2026-07-27 BUY NO] F1 Drivers Champion — Andrea Kimi Antonelli
+    stored code   : active  "Will Andrea Kimi Antonelli win the F1 Drivers Championship?" [Andrea Kimi Antonelli]  (live)
+
+KXFEDDECISION-26JUL-H0   [DB: 1 row(s), Resolved outcome=YES; first 2026-07-21 BUY YES] Fed decision in July — Maintains rate
+    stored code   : finalized/yes  "Will the Federal Reserve Hike rates by 0bps at their July 2026 meeting?" [Fed maintains rate]  settled 2026-07-29  (historical)
+
+KXFEDDECISION-26SEP-H0   [DB: 1 row(s), Resolved outcome=NO; first 2026-08-07 BUY YES] Fed decision in September — Maintains rate
+    stored code   : finalized/no  "Will the Federal Reserve Hike rates by 0bps at their September 2026 meeting?" [Fed maintains rate]  settled 2026-09-16  (live)
+
+KXFIRSTHURRICANE-26DEC01ATL-FAY   [DB: 1 row(s), Resolved outcome=NO; first 2026-09-18 BUY NO] First Atlantic hurricane — Fay
+    stored code   : finalized/no  "Will Fay be the first named hurricane in the Atlantic in 2026?" [Fay]  settled 2026-10-08  (live)
+
+KXFIRSTHURRICANE-26DEC01ATL-GON   [DB: 1 row(s), Resolved outcome=NO; first 2026-09-21 BUY NO] First Atlantic hurricane — Gonzalo
+    stored code   : finalized/no  "Will Gonzalo be the first named hurricane in the Atlantic in 2026?" [Gonzalo]  settled 2026-10-08  (live)
+
+KXFIRSTHURRICANE-26DEC01ATL-HAN   [DB: 1 row(s), Resolved outcome=NO; first 2026-09-25 BUY NO] First Atlantic hurricane — Hanna
+    stored code   : finalized/no  "Will Hanna be the first named hurricane in the Atlantic in 2026?" [Hanna]  settled 2026-10-08  (live)
+
+KXFIRSTHURRICANE-26DEC01ATL-ISA   [DB: 1 row(s), Resolved outcome=YES; first 2026-09-28 BUY NO] First Atlantic hurricane — Isaias
+    stored code   : finalized/yes  "Will Isaias be the first named hurricane in the Atlantic in 2026?" [Isaias]  settled 2026-10-08  (live)
+
+KXGAMEAWARDS-2026-GTA   [DB: 1 row(s), Open; first 2026-07-21 BUY NO] Game Awards 2026 GOTY — Grand Theft Auto VI
+    stored code   : active  "2026 Game of the Year?" [Grand Theft Auto VI]  (live)
+
+KXGTEMP-26-P0   [DB: 3 row(s), Open; first 2026-07-28 BUY NO] Will 2026 be the hottest year ever?
+    stored code   : active  "Will 2026 be the hottest year on record?" [Hottest]  (live)
+
+KXHEISMAN-27-DMENS   [DB: 1 row(s), Open; first 2026-09-14 BUY NO] Heisman Trophy Winner — Darian Mensah
+    stored code   : active  "Who will win Heisman Trophy?" [Darian Mensah]  (live)
+
+KXHEISMAN-27-JSMIT   [DB: 1 row(s), Open; first 2026-09-28 BUY NO] Heisman Trophy Winner — Jeremiah Smith
+    stored code   : active  "Who will win Heisman Trophy?" [Jeremiah Smith]  (live)
+
+KXHEISMAN-27-TCHAM   [DB: 1 row(s), Open; first 2026-09-21 BUY NO] Heisman Trophy Winner — Trinidad Chambliss
+    stored code   : active  "Who will win Heisman Trophy?" [Trinidad Chambliss]  (live)
+
+KXHMONTH-26JUL   [DB: 1 row(s), Resolved outcome=NO; first 2026-08-10 BUY YES] This July 2026 is the hottest July ever?
+    stored code   : finalized/no  "Will  Jul 2026 be the hottest Jul ever?" [Hottest ever]  settled 2026-08-14  (live)
+
+KXHORMUZNORM-26MAR17-B261201   [DB: 1 row(s), Open; first 2026-08-05 BUY NO] Hormuz traffic normal before Dec 1 2026?
+    stored code   : active  "Will the 7-day moving average of transit calls through the Strait of Hormuz as reported by the IMF PortWatch be above 60 before December 1, 2026?" [Before Dec 1, 2026]  (live)
+
+KXHORMUZNORM-26MAR17-B270101   [DB: 1 row(s), Open; first 2026-07-21 BUY NO] Hormuz traffic normal before Jan 1 2027?
+    stored code   : active  "Will the 7-day moving average of transit calls through the Strait of Hormuz as reported by the IMF PortWatch be above 60 before January 1, 2027?" [Before Jan 1, 2027]  (live)
+
+KXHORMUZNORM-26MAR17-B270401   [DB: 1 row(s), Open; first 2026-07-24 BUY NO] Hormuz traffic normal before Apr 1 2027?
+    stored code   : active  "Will the 7-day moving average of transit calls through the Strait of Hormuz as reported by the IMF PortWatch be above 60 before April 1, 2027?" [Before Apr 1, 2027]  (live)
+
+KXHORMUZNORM-26MAR17-B270701   [DB: 2 row(s), Open; first 2026-07-24 BUY NO] Hormuz traffic normal before Jul 1 2027?
+    stored code   : active  "Will the 7-day moving average of transit calls through the Strait of Hormuz as reported by the IMF PortWatch be above 60 before July 1, 2027?" [Before Jul 1, 2027]  (live)
+
+KXHORMUZNORM-26MAR17-B280101   [DB: 1 row(s), Open; first 2026-09-11 BUY NO] Hormuz traffic normal before Jan 1 2028?
+    stored code   : active  "Will the 7-day moving average of transit calls through the Strait of Hormuz as reported by the IMF PortWatch be above 60 before January 1, 2028?" [Before Jan 1, 2028]  (live)
+
+KXHURCTOTMAJ-26DEC01-T0   [DB: 1 row(s), Resolved outcome=YES; first 2026-09-16 BUY NO] Major Atlantic hurricanes 2026 — Above 0
+    stored code   : finalized/yes  "Will there be more than 0 major Atlantic hurricanes in 2026?" [Above 0]  settled 2026-10-12  (live)
+
+KXHURCTOTMAJ-26DEC01-T1   [DB: 1 row(s), Open; first 2026-08-14 BUY NO] Major Atlantic hurricanes 2026 — Above 1
+    stored code   : active  "Will there be more than 1 major Atlantic hurricanes in 2026?" [Above 1]  (live)
+
+KXHURPATHHAWAII-26DEC   [DB: 1 row(s), Open; first 2026-09-25 BUY NO] Hurricane landfall in Hawaii in 2026?
+    stored code   : active  "Will a hurricane make landfall in Hawaii during the 2026 hurricane season?" [Before 2027]  (live)
+
+KXLEADERSOUT-27JAN01-BNETISR   [DB: 1 row(s), Open; first 2026-08-10 BUY NO] Leaders leaving office 2026 — Benjamin Netanyahu
+    stored code   : active  "Will Benjamin Netanyahu leave Prime Minister of Israel before Jan 1, 2027?" [Benjamin Netanyahu]  (live)
+
+KXLEADERSOUT-27JAN01-PLUXPMNZ   [DB: 1 row(s), Open; first 2026-08-12 BUY NO] Leaders leaving office 2026 — Christopher Luxon
+    stored code   : active  "Will Christopher Luxon leave Prime Minister of New Zealand before Jan 1, 2027?" [Christopher Luxon]  (live)
+
+KXMLB-26-LAD   [DB: 2 row(s), Open; first 2026-07-21 BUY NO] Pro Baseball Champion — Los Angeles Dodgers
+    stored code   : active  "Will Los Angeles D win the 2026 Pro Baseball Championship?" [Los Angeles D]  (live)
+
+KXNBA-27-OKC   [DB: 3 row(s), Open; first 2026-07-21 BUY NO] 2027 Pro Basketball Champion — Oklahoma City Thunder
+    stored code   : active  "Will Oklahoma City win the 2027 Pro Basketball Finals?" [Oklahoma City]  (live)
+
+KXNBA-27-SAS   [DB: 1 row(s), Open; first 2026-07-27 BUY NO] 2027 NBA Champion — San Antonio Spurs
+    stored code   : active  "Will San Antonio win the 2027 Pro Basketball Finals?" [San Antonio]  (live)
+
+KXNCAAF-27-TEX   [DB: 2 row(s), Open; first 2026-09-14 BUY NO] College Football Champion — Texas
+    stored code   : active  "Will Texas win the College Football Playoff National Championship?" [Texas]  (live)
+
+KXNCAAF-27-UGA   [DB: 1 row(s), Open; first 2026-09-30 BUY NO] College Football Champion — Georgia
+    stored code   : active  "Will Georgia win the College Football Playoff National Championship?" [Georgia]  (live)
+
+KXNEXTAG-29-TBLA   [DB: 2 row(s), Resolved outcome=YES; first 2026-07-31 BUY NO] Trump next Attorney General — Todd Blanche
+    stored code   : finalized/yes  "Who will be Trump's next Attorney General?" [Todd Blanche]  settled 2026-08-09  (live)
+
+KXNEXTTEAMNBA-26LJAM-CLE   [DB: 1 row(s), Resolved outcome=NO; first 2026-07-21 BUY NO] LeBron James Next Team — Cleveland Cavaliers
+    stored code   : finalized/no  "What will be LeBron James's next team?" [Cleveland]  settled 2026-07-26  (historical)
+
+KXNEXTTEAMNBA-26LJAM-MIA   [DB: 1 row(s), Resolved outcome=NO; first 2026-07-22 BUY YES] LeBron James Next Team — Miami Heat
+    stored code   : finalized/no  "What will be LeBron James's next team?" [Miami]  settled 2026-07-26  (historical)
+
+KXNFLMVP-27-BPUR   [DB: 1 row(s), Open; first 2026-10-12 BUY NO] NFL MVP — Brock Purdy
+    stored code   : active  "Will Brock Purdy win the MVP?" [Brock Purdy]  (live)
+
+KXOSCARPIC-27-ODY   [DB: 4 row(s), Open; first 2026-07-21 BUY NO] Oscar Best Picture — The Odyssey
+    stored code   : active  "Will The Odyssey win Best Picture at the Oscars?" [The Odyssey]  (live)
+
+KXPGATOUR-3MO26-SSCH   [DB: 1 row(s), Resolved outcome=NO; first 2026-07-21 BUY NO] 3M Open Winner — Scottie Scheffler
+    stored code   : finalized/no  "Will Scottie Scheffler win the 3M Open?" [Scottie Scheffler]  settled 2026-07-26  (historical)
+
+KXPGATOUR-BMC26-SSCH   [DB: 1 row(s), Resolved outcome=NO; first 2026-08-19 BUY NO] BMW Championship Winner — Scottie Scheffler
+    stored code   : finalized/no  "Will Scottie Scheffler win the BMW Championship?" [Scottie Scheffler]  settled 2026-08-23  (live)
+
+KXPGATOUR-FESJC26-SSCH   [DB: 1 row(s), Resolved outcome=YES; first 2026-08-12 BUY NO] FedEx St. Jude Championship — Scottie Scheffler
+    stored code   : finalized/yes  "Will Scottie Scheffler win the FedEx St. Jude Championship?" [Scottie Scheffler]  settled 2026-08-16  (live)
+
+KXPGATOUR-TOC26-SSCH   [DB: 1 row(s), Resolved outcome=YES; first 2026-08-26 BUY NO] TOUR Championship Winner — Scottie Scheffler
+    stored code   : finalized/yes  "Will Scottie Scheffler win the TOUR Championship?" [Scottie Scheffler]  settled 2026-08-30  (live)
+
+KXRATECUTCOUNT-26DEC31-T0   [DB: 1 row(s), Open; first 2026-07-21 BUY YES] Number of rate cuts in 2026 — Exactly 0
+    stored code   : active  "Will the Fed cut rates 0 times?" [Exactly 0 cuts]  (live)
+
+KXRECSSNBER-26   [DB: 1 row(s), Open; first 2026-08-03 BUY YES] Recession this year?
+    stored code   : active  "Will there be a recession in 2026?" [Starts]  (live)
+
+KXRT-SPI-90   [DB: 1 row(s), Resolved outcome=NO; first 2026-07-31 BUY NO] Spider-Man Brand New Day — RT score above 90
+    stored code   : finalized/no  "Spider-Man: Brand New Day Rotten Tomatoes score?" [Above 90]  settled 2026-08-03  (historical)
+
+KXRT-SPI-91   [DB: 1 row(s), Resolved outcome=NO; first 2026-07-28 BUY NO] Spider-Man Brand New Day — RT score above 91
+    stored code   : finalized/no  "Spider-Man: Brand New Day Rotten Tomatoes score?" [Above 91]  settled 2026-08-03  (historical)
+
+KXSAVEACT-27-JAN04   [DB: 1 row(s), Open; first 2026-07-21 BUY NO] Will the SAVE Act become law?
+    stored code   : active  "Will "SAVE Act" (H.R. 22) becomes law before Jan 4, 2027?" [Before Jan 4, 2027]  (live)
+
+KXSB-27-LAR   [DB: 4 row(s), Open; first 2026-07-21 BUY NO] 2027 Pro Football Champion — Los Angeles Rams
+    stored code   : active  "Will Los Angeles R win the 2027 Pro Football Championship?" [Los Angeles R]  (live)
+
+KXSB-27-SF   [DB: 1 row(s), Open; first 2026-10-12 BUY NO] 2027 NFL Champion — San Francisco 49ers
+    stored code   : active  "Will San Francisco win the 2027 Pro Football Championship?" [San Francisco]  (live)
+
+KXUSAIRANAGREEMENT-27-28   [DB: 1 row(s), Open; first 2026-07-21 BUY NO] US-Iran nuclear deal before Jan 1 2028?
+    stored code   : active  "Will the US agree to a new Iranian nuclear deal this year?" [Before Jan 1, 2028]  (live)
+
+KXUSAIRANAGREEMENT-27-29JAN20   [DB: 6 row(s), Open; first 2026-07-22 BUY NO] US-Iran nuclear deal before Jan 20 2029?
+    stored code   : active  "Will the US agree to a new Iranian nuclear deal this year?" [Before Jan 20, 2029]  (live)
+
+====================================================================================================
+FLAGS (0)

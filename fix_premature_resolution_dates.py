@@ -7,7 +7,7 @@ It also fires on contracts that genuinely settled EARLY, because the stored
 close date is Kalshi's latest possible expiry, not the date it settled.
 
 For each contract below, Kalshi's own API reports it finalized on the date
-given (verified by audit_tickers.py on 12 Oct 2026, raw API, not a summary).
+given (verified against Kalshi's API on 12 and 14 Oct 2026).
 This script sets contract_close_date to that real settlement date on every
 row of the contract. It changes no outcome and no status.
 
@@ -17,6 +17,7 @@ row of the contract. It changes no outcome and no status.
   KXFIRSTHURRICANE-26DEC01ATL-GON    2026-10-08  (same)
   KXFIRSTHURRICANE-26DEC01ATL-HAN    2026-10-08  (same)
   KXFIRSTHURRICANE-26DEC01ATL-ISA    2026-10-08  (same)
+  KXHURCTOTMAJ-26DEC01-T0            2026-10-12  Isaias reached Category 3
 
 Safe to run more than once.
 
@@ -35,6 +36,7 @@ FIXES = [
     ("KXFIRSTHURRICANE-26DEC01ATL-GON", "2026-10-08", "Isaias became the first Atlantic hurricane"),
     ("KXFIRSTHURRICANE-26DEC01ATL-HAN", "2026-10-08", "Isaias became the first Atlantic hurricane"),
     ("KXFIRSTHURRICANE-26DEC01ATL-ISA", "2026-10-08", "Isaias became the first Atlantic hurricane"),
+    ("KXHURCTOTMAJ-26DEC01-T0",         "2026-10-12", "Isaias reached Category 3; Kalshi settled YES 12 Oct"),
 ]
 
 conn = sqlite3.connect(db.DB_PATH)
