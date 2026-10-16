@@ -117,6 +117,11 @@ TICKER_ALIASES = {
     "KXQUAKEWORLD-26SEP01-78":         "KXEARTHQUAKEM-26AUG-78",
     "KXRATECUTCOUNT-26DEC31":          "KXRATECUTCOUNT-26DEC31-T0",
     "KXSAVEACT-27":                    "KXSAVEACT-27-JAN04",
+    # Verified against Kalshi's API on 16 Oct 2026. These spellings were only
+    # ever used on NO TRADE rows (never logged), so no scored call is affected.
+    "KXLAYOFFSYINFO-26":               "KXLAYOFFSYINFO-26-494000",
+    "KXTRUMPADMINLEAVE-26-DCOL":       "KXTRUMPADMINLEAVE-26DEC31-DCOL",
+    "KXTRUMPADMINLEAVE-26-PHEG":       "KXTRUMPADMINLEAVE-26DEC31-PHEG",
 }
 
 # No target may itself be a left-hand spelling (that would need two passes).
