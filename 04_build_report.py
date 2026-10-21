@@ -406,7 +406,11 @@ def build_docx(df, sections, contrarian_rows, report_date, output_path):
     _events = df["kalshi_ticker"].astype(str).map(
         lambda t: t.rsplit("-", 1)[0] if t.count("-") >= 2 else t)
     n_published = min(25, _events.nunique())
-    n_actionable = int((df["edge_score"].abs() >= 0.03).sum())
+    # Threshold rule (adopted 21 Oct 2026): open a new position at >= 3pp,
+    # hold an open one while the gap is >= 2pp, reopen a closed one at >= 4pp.
+    # A held position can therefore be actionable at 2pp and a closed one can be
+    # NO TRADE at 3pp, so count the published BUY calls, not raw edges.
+    n_actionable = int(df["recommendation"].str.upper().str.contains("BUY", na=False).sum())
     n_high = int((df["conviction"].str.upper() == "HIGH").sum())
     excluded_note = sections.get("Publication Note", "")
     # user records the screened/excluded counts in the narrative; fall back to published count
@@ -414,7 +418,7 @@ def build_docx(df, sections, contrarian_rows, report_date, output_path):
     add_dashboard_table(doc, [
         ("Markets screened", sections.get("Markets Screened", "25 (5 categories × 5)")),
         ("Markets excluded for data quality", 25 - n_published),
-        ("Markets with actionable edge (≥ 3pp)", n_actionable),
+        ("Actionable calls (open ≥ 3pp, hold ≥ 2pp, reopen ≥ 4pp)", n_actionable),
         ("HIGH conviction calls", n_high),
     ])
 
