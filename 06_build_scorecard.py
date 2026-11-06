@@ -1,1159 +1,690 @@
 """
-06_build_scorecard.py — AFG Forecast Accuracy Index
+06_build_scorecard.py  —  AFG Scorecard Builder
+Final-Call Only Scoring  ·  Effective November 6th, 2026
 
-Produces two elite outputs from resolved predictions in the scorecard database:
-  1. reports/AFG_Scorecard_<date>.docx   — Word doc for records
-  2. docs/index.html                      — GitHub Pages public dashboard
+SCORING RULE:
+  Only the most recently published BUY YES or BUY NO call per ticker,
+  at or before the settlement date, is scored.
+  Direction changes carry no penalty — Bayesian updating is correct behavior.
+  Positions closed to NO TRADE before settlement are excluded from the
+  win/loss record and appear in the Closed Positions disclosure table only.
 
-INTEGRITY CHECK: Prints DB state before building anything.
-Every "Resolved" call must correspond to an actual Kalshi settlement.
-Run 05_update_scorecard.py first to pull live resolution data.
+CHANGES FROM PRIOR VERSION:
+  - First-Call scoring loop removed entirely.
+  - "Position Changes" section removed from HTML output.
+  - Deduplication now reads LAST call per ticker (not first).
+  - Single accuracy track: Final-Call.
 """
 
+import sqlite3
 import os
-from datetime import date
+import sys
+import shutil
+from datetime import date, datetime
 
-import pandas as pd
-from docx import Document
-from docx.shared import Pt, Inches, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.oxml.ns import qn
-from docx.oxml import OxmlElement
+# ── CONFIG ────────────────────────────────────────────────────────────────────
+DB_PATH          = "afg_scorecard.db"
+SCORECARD_DIR    = os.path.join("reports", "scorecards")
+DOCS_DIR         = "docs"
+TODAY            = date.today().isoformat()
 
-from db import get_conn
+# ── DB HELPERS ────────────────────────────────────────────────────────────────
 
-# ── brand colours ────────────────────────────────────────────────────────────
-NAVY        = RGBColor(0x17, 0x36, 0x5D)
-BLUE        = RGBColor(0x36, 0x5F, 0x91)
-GREEN       = RGBColor(0x1F, 0x6F, 0x3D)
-RED         = RGBColor(0xA6, 0x23, 0x1F)
-GRAY        = RGBColor(0x80, 0x80, 0x80)
-HEADER_FILL = "DCE6F1"
-GREEN_FILL  = "E8F5E9"
-RED_FILL    = "FDECEA"
-FONT        = "Cambria"
-
-CATEGORY_ORDER = ["Sports", "Economics", "Politics", "Culture", "Weather"]
-DOCX_DIR       = "reports/scorecards"
-WEB_DIR        = "docs"
+def get_connection():
+    if not os.path.exists(DB_PATH):
+        print(f"ERROR: {DB_PATH} not found. Run from C:\\Users\\qwhit\\AFG\\")
+        sys.exit(1)
+    return sqlite3.connect(DB_PATH)
 
 
-# ── data ─────────────────────────────────────────────────────────────────────
-
-def _rd(value):
-    """Parse a report/close date for ORDERING. Dates in the database have been
-    stored as both ISO (2026-08-07) and US (7/21/2026). Compared as text,
-    '2026-08-07' sorts before '7/21/2026', which would make a later call look
-    like the first call. Always order by parsed date, never by string."""
-    import datetime
-    from db import _parse_date
-    return _parse_date(value) or datetime.date.min
-
-
-def load_resolved(mode="first"):
-    """
-    Loads resolved predictions, deduplicated by kalshi_ticker.
-
-    mode="first" (FIRST-CALL ACCURACY): keeps AFG's earliest published call
-    per ticker. This is the hardest test — it scores the call made at the
-    point of maximum uncertainty and is the PRIMARY trust metric.
-
-    mode="last" (UPDATED-POSITION ACCURACY): keeps AFG's latest published
-    call per ticker before resolution. This credits disciplined Bayesian
-    updating on genuine new information or corrected research errors.
-
-    DUAL-TRACK RULE (adopted August 2026): both numbers are always computed
-    and displayed side by side with equal visual weight. Neither replaces
-    the other. This lets AFG credit honest updating (e.g. the Oscar Best
-    Picture correction, where the first call rested on a stale premise)
-    without opening a loophole where any wrong call can be laundered into
-    a right one by relabeling it "an update" (the risk flagged with the
-    Blanche reversal, where the first call stays scored as incorrect on
-    the first-call track regardless of this function's other mode).
-    """
-    with get_conn() as conn:
-        rows = [dict(r) for r in conn.execute(
-            "SELECT * FROM predictions WHERE status='Resolved' ORDER BY contract_close_date DESC"
-        ).fetchall()]
-
-    # CLOSED-POSITION RULE (adopted September 2026). A position AFG exited
-    # before resolution had no live recommendation at settlement — a subscriber
-    # following AFG held nothing. The Updated-Position track therefore excludes
-    # it. The First-Call track still scores the original call, because it was
-    # published and closing later does not erase it. Closed positions are
-    # disclosed in their own table so the record stays complete; this is
-    # deliberately NOT a mechanism for removing losses from the record.
-    if mode == "last":
-        rows = [r for r in rows if not r.get("afg_closed")]
-
-    calls = {}
-    duplicates_dropped = 0
-    for r in rows:
-        key = r.get("kalshi_ticker") or r.get("market")
-        existing = calls.get(key)
-        if existing is None:
-            calls[key] = r
-        else:
-            duplicates_dropped += 1
-            r_date  = _rd(r.get("report_date"))
-            ex_date = _rd(existing.get("report_date"))
-            if mode == "first":
-                if r_date < ex_date:
-                    calls[key] = r
-            else:  # mode == "last"
-                if r_date > ex_date:
-                    calls[key] = r
-
-    deduped = sorted(
-        calls.values(),
-        key=lambda x: _rd(x.get("contract_close_date")),
-        reverse=True,
-    )
-
-    if duplicates_dropped and mode == "first":
-        print(f"  Deduplication: {duplicates_dropped} repeat forecast(s) excluded "
-              f"(first-call-only rule). {len(deduped)} unique market(s) scored "
-              f"on the First-Call track.")
-
-    return deduped
-
-
-def load_position_history():
-    """
-    Builds a per-ticker comparison of the first published call vs the last
-    published call before resolution, for markets where AFG changed
-    direction. Used to render the reversal disclosure table.
-    """
-    with get_conn() as conn:
-        rows = [dict(r) for r in conn.execute(
-            "SELECT * FROM predictions WHERE status='Resolved' ORDER BY report_date"
-        ).fetchall()]
-
-    by_ticker = {}
-    for r in rows:
-        key = r.get("kalshi_ticker") or r.get("market")
-        by_ticker.setdefault(key, []).append(r)
-
-    history = []
-    for key, calls in by_ticker.items():
-        calls.sort(key=lambda x: _rd(x.get("report_date")))
-        first, last = calls[0], calls[-1]
-        reversed_ = first.get("recommendation") != last.get("recommendation")
-        history.append({
-            "market": first["market"],
-            "category": first["category"],
-            "first": first,
-            "last": last,
-            "reversed": reversed_,
-        })
-
-    history.sort(key=lambda h: str(h["last"].get("contract_close_date") or ""), reverse=True)
-    return history
-
-
-def load_closed_positions():
-    """
-    Contracts AFG exited before resolution. Returns the earliest published
-    call per ticker together with the closure date, the stated reason, and
-    the eventual outcome. These appear in their own disclosure table.
-    """
-    with get_conn() as conn:
-        cols = {r[1] for r in conn.execute("PRAGMA table_info(predictions)").fetchall()}
-        if "afg_closed" not in cols:
-            return []
-        rows = [dict(r) for r in conn.execute(
-            "SELECT * FROM predictions WHERE status='Resolved' AND afg_closed=1 "
-            "ORDER BY report_date"
-        ).fetchall()]
-
-    by_ticker = {}
-    for r in rows:
-        key = r.get("kalshi_ticker") or r.get("market")
-        by_ticker.setdefault(key, []).append(r)
-
-    closed = []
-    for key, calls in by_ticker.items():
-        calls.sort(key=lambda x: _rd(x.get("report_date")))
-        first = calls[0]
-        closed.append({
-            "market":        first["market"],
-            "category":      first["category"],
-            "first_call":    first.get("recommendation"),
-            "first_prob":    first.get("afg_probability"),
-            "closed_date":   first.get("afg_closed_date"),
-            "closed_reason": first.get("afg_closed_reason"),
-            "outcome":       first.get("outcome"),
-            "would_have_hit": call_correct(first),
-        })
-
-    closed.sort(key=lambda c: str(c.get("closed_date") or ""), reverse=True)
-    return closed
-
-
-def call_correct(r):
-    if r["recommendation"] == "BUY YES":
-        return r["outcome"] == 1
-    if r["recommendation"] == "BUY NO":
-        return r["outcome"] == 0
+def _parse_date(val):
+    """Return a date object from ISO string, MM/DD/YYYY, or M/D/YYYY. Never compare raw strings."""
+    if val is None:
+        return None
+    val = str(val).strip()
+    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%m/%d/%y"):
+        try:
+            return datetime.strptime(val, fmt).date()
+        except ValueError:
+            continue
     return None
 
 
-def compute_metrics(resolved):
-    n = len(resolved)
-    if n == 0:
-        return None
+# ── FETCH FINAL CALLS ─────────────────────────────────────────────────────────
 
-    correct_list = [r for r in resolved if call_correct(r) is True]
-    incorrect_list = [r for r in resolved if call_correct(r) is False]
+def fetch_scored_positions(conn):
+    """
+    For every resolved ticker, return the LAST published BUY YES / BUY NO call
+    whose published_date <= settlement_date.
 
-    afg_brier    = sum(r["brier_score"] or 0 for r in resolved) / n
-    kalshi_brier = sum(r["kalshi_brier_score"] or 0 for r in resolved) / n
+    Returns list of dicts with keys:
+      ticker, market, category, final_call, afg_pct, kalshi_pct,
+      published_date, settled_date, outcome, brier, closed
+    """
+    cur = conn.cursor()
 
-    by_cat = {}
-    for cat in CATEGORY_ORDER:
-        subset = [r for r in resolved if r["category"] == cat]
-        if not subset:
+    # Pull all resolved contracts
+    cur.execute("""
+        SELECT DISTINCT ticker
+        FROM predictions
+        WHERE outcome IS NOT NULL AND outcome != ''
+        AND status NOT IN ('Void', 'Superseded')
+    """)
+    resolved_tickers = [r[0] for r in cur.fetchall()]
+
+    scored = []
+    closed = []
+
+    for ticker in resolved_tickers:
+        # Get settlement info
+        cur.execute("""
+            SELECT outcome, close_date, market, category
+            FROM predictions
+            WHERE ticker = ? AND outcome IS NOT NULL AND outcome != ''
+            AND status NOT IN ('Void', 'Superseded')
+            ORDER BY rowid DESC LIMIT 1
+        """, (ticker,))
+        row = cur.fetchone()
+        if not row:
             continue
-        c = [r for r in subset if call_correct(r) is True]
-        ic = [r for r in subset if call_correct(r) is False]
-        by_cat[cat] = {
-            "n":        len(subset),
-            "correct":  len(c),
-            "incorrect": len(ic),
-            "accuracy": len(c) / len(subset) if subset else None,
-            "afg_brier": sum(r["brier_score"] or 0 for r in subset) / len(subset),
+        outcome, close_date_raw, market, category = row
+        settle_date = _parse_date(close_date_raw)
+
+        # Get ALL published calls for this ticker, in date order
+        cur.execute("""
+            SELECT recommendation, afg_probability, kalshi_price, published_date
+            FROM predictions
+            WHERE ticker = ?
+            AND recommendation IN ('BUY YES', 'BUY NO', 'NO TRADE')
+            AND status NOT IN ('Void', 'Superseded')
+            ORDER BY published_date ASC, rowid ASC
+        """, (ticker,))
+        calls = cur.fetchall()
+
+        if not calls:
+            continue
+
+        # Find the last published call at or before settlement
+        last_call = None
+        for rec, afg_p, kal_p, pub_date_raw in calls:
+            pub_date = _parse_date(pub_date_raw)
+            if settle_date and pub_date and pub_date > settle_date:
+                break
+            last_call = (rec, afg_p, kal_p, pub_date_raw)
+
+        if last_call is None:
+            continue
+
+        final_rec, afg_p, kal_p, pub_date = last_call
+
+        # Convert probabilities (stored as 0.0–1.0 decimals or 0–100 ints)
+        try:
+            afg_pct    = float(afg_p) * 100 if float(afg_p) <= 1.0 else float(afg_p)
+            kalshi_pct = float(kal_p) * 100 if float(kal_p) <= 1.0 else float(kal_p)
+        except (TypeError, ValueError):
+            afg_pct = kalshi_pct = 0.0
+
+        # Closed = last call was NO TRADE
+        is_closed = (final_rec == "NO TRADE")
+
+        # Brier score (on AFG probability at final call)
+        o = 1 if str(outcome).upper() == "YES" else 0
+        p = afg_pct / 100.0
+        brier = round((p - o) ** 2, 3)
+
+        entry = {
+            "ticker":       ticker,
+            "market":       market or ticker,
+            "category":     category or "—",
+            "final_call":   final_rec,
+            "afg_pct":      round(afg_pct, 1),
+            "kalshi_pct":   round(kalshi_pct, 1),
+            "published_date": pub_date,
+            "settle_date":  close_date_raw,
+            "outcome":      str(outcome).upper(),
+            "brier":        brier,
+            "closed":       is_closed,
         }
 
+        if is_closed:
+            # Compute "would have been" for disclosure table
+            if final_rec == "BUY YES":
+                entry["would_have"] = "✓ Correct" if o == 1 else "✗ Incorrect"
+            else:
+                entry["would_have"] = "✓ Correct" if o == 0 else "✗ Incorrect"
+            closed.append(entry)
+        else:
+            # Score it
+            if final_rec == "BUY YES":
+                entry["result"] = "Correct" if o == 1 else "Incorrect"
+            else:
+                entry["result"] = "Correct" if o == 0 else "Incorrect"
+            scored.append(entry)
+
+    return scored, closed
+
+
+# ── SUMMARY STATS ─────────────────────────────────────────────────────────────
+
+def compute_stats(scored):
+    n = len(scored)
+    if n == 0:
+        return {"n": 0, "correct": 0, "incorrect": 0, "accuracy": 0.0,
+                "afg_brier": 0.0, "mkt_brier": 0.0}
+    correct   = sum(1 for r in scored if r["result"] == "Correct")
+    incorrect = n - correct
+    afg_brier = sum(r["brier"] for r in scored) / n
+
+    # Market Brier (Kalshi price at time of final call)
+    mkt_briers = []
+    for r in scored:
+        p = r["kalshi_pct"] / 100.0
+        o = 1 if r["outcome"] == "YES" else 0
+        mkt_briers.append((p - o) ** 2)
+    mkt_brier = sum(mkt_briers) / n if mkt_briers else 0.0
+
+    # Category breakdown
+    cats = {}
+    for r in scored:
+        c = r["category"]
+        if c not in cats:
+            cats[c] = {"correct": 0, "total": 0}
+        cats[c]["total"] += 1
+        if r["result"] == "Correct":
+            cats[c]["correct"] += 1
+
     return {
-        "n":            n,
-        "correct":      len(correct_list),
-        "incorrect":    len(incorrect_list),
-        "accuracy":     len(correct_list) / n,
-        "afg_brier":    afg_brier,
-        "kalshi_brier": kalshi_brier,
-        "skill_delta":  kalshi_brier - afg_brier,
-        "by_cat":       by_cat,
+        "n":          n,
+        "correct":    correct,
+        "incorrect":  incorrect,
+        "accuracy":   round(correct / n * 100, 1),
+        "afg_brier":  round(afg_brier, 3),
+        "mkt_brier":  round(mkt_brier, 3),
+        "categories": cats,
     }
 
 
-# ── docx helpers ─────────────────────────────────────────────────────────────
+# ── HTML BUILDER ──────────────────────────────────────────────────────────────
 
-def _run(p, text, size=10.5, bold=False, italic=False, color=None):
-    r = p.add_run(text)
-    r.font.name = FONT; r.font.size = Pt(size)
-    r.font.bold = bold; r.font.italic = italic
-    if color: r.font.color.rgb = color
-    return r
-
-
-def _shade(cell, fill):
-    s = OxmlElement("w:shd")
-    s.set(qn("w:fill"), fill); s.set(qn("w:val"), "clear")
-    cell._tc.get_or_add_tcPr().append(s)
-
-
-def _borders(cell, color="B0B8C8"):
-    tcPr = cell._tc.get_or_add_tcPr()
-    b = OxmlElement("w:tcBorders")
-    for e in ("top", "left", "bottom", "right"):
-        el = OxmlElement(f"w:{e}")
-        el.set(qn("w:val"), "single"); el.set(qn("w:sz"), "2")
-        el.set(qn("w:color"), color)
-        b.append(el)
-    tcPr.append(b)
-
-
-def _set_widths(t, widths):
-    tblPr = t._tbl.tblPr
-    for x in tblPr.findall(qn("w:tblLayout")): tblPr.remove(x)
-    for x in tblPr.findall(qn("w:tblW")):     tblPr.remove(x)
-    w = OxmlElement("w:tblW")
-    w.set(qn("w:w"), str(sum(widths))); w.set(qn("w:type"), "dxa")
-    tblPr.append(w)
-    grid = t._tbl.find(qn("w:tblGrid"))
-    if grid is not None: t._tbl.remove(grid)
-    grid = OxmlElement("w:tblGrid")
-    for wi in widths:
-        gc = OxmlElement("w:gridCol"); gc.set(qn("w:w"), str(wi)); grid.append(gc)
-    t._tbl.insert(list(t._tbl).index(tblPr) + 1, grid)
-    for row in t.rows:
-        for i, c in enumerate(row.cells):
-            if i < len(widths):
-                tcPr = c._tc.get_or_add_tcPr()
-                for old in tcPr.findall(qn("w:tcW")): tcPr.remove(old)
-                tcW = OxmlElement("w:tcW")
-                tcW.set(qn("w:w"), str(widths[i])); tcW.set(qn("w:type"), "dxa")
-                tcPr.append(tcW)
-
-
-def _heading(doc, text, size=13, color=BLUE):
-    p = doc.add_paragraph()
-    p.paragraph_format.space_before = Pt(14)
-    p.paragraph_format.space_after  = Pt(4)
-    _run(p, text, size=size, bold=True, color=color)
-    pbdr = OxmlElement("w:pBdr"); bot = OxmlElement("w:bottom")
-    bot.set(qn("w:val"), "single"); bot.set(qn("w:sz"), "6")
-    bot.set(qn("w:color"), "365F91"); bot.set(qn("w:space"), "3")
-    pbdr.append(bot); p._p.get_or_add_pPr().append(pbdr)
+STYLES = """
+<style>
+:root{--navy:#0D1B2A;--gold:#C9A84C;--white:#FFFFFF;--light:#F5F5F0;
+--mid:#E8E8E2;--gray:#CCCCCC;--green:#1A7A4A;--red:#B22222;--text:#1A1A1A;--muted:#555}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Georgia,serif;background:var(--light);color:var(--text);line-height:1.6}
+header{background:var(--navy);padding:36px 24px 28px;text-align:center}
+header .eyebrow{font-family:Arial,sans-serif;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+header h1{font-size:26px;font-weight:bold;color:var(--white);margin-bottom:6px}
+header .subtitle{font-size:13px;color:var(--gray);font-style:italic}
+header .updated{margin-top:10px;font-family:Arial,sans-serif;font-size:11px;color:var(--gold);letter-spacing:1px}
+main{max-width:960px;margin:0 auto;padding:32px 20px 60px}
+.methodology-banner{background:var(--navy);color:var(--gold);border-left:4px solid var(--gold);padding:14px 18px;border-radius:4px;margin-bottom:28px;font-family:Arial,sans-serif;font-size:13px;line-height:1.6}
+.methodology-banner strong{color:var(--white)}
+.section-title{font-family:Arial,sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);background:var(--navy);padding:8px 14px;border-radius:3px 3px 0 0}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--gray);border:1px solid var(--gray);border-radius:0 0 4px 4px;margin-bottom:32px;overflow:hidden}
+.stat-cell{background:var(--white);padding:18px 14px;text-align:center}
+.stat-cell .stat-label{font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.stat-cell .stat-value{font-size:24px;font-weight:bold;color:var(--navy);line-height:1.1}
+.stat-cell .stat-sub{font-size:11px;color:var(--muted);margin-top:3px}
+.stat-cell.highlight .stat-value{color:var(--green)}
+.brier-row{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--gray);border:1px solid var(--gray);border-radius:0 0 4px 4px;margin-bottom:32px;overflow:hidden}
+.brier-cell{background:var(--white);padding:16px 18px;text-align:center}
+.brier-cell .label{font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.brier-cell .value{font-size:22px;font-weight:bold}
+.brier-cell.afg .value{color:var(--red)}
+.brier-cell.mkt .value{color:var(--green)}
+.brier-cell .note{font-size:11px;color:var(--muted);margin-top:4px;font-style:italic}
+.cat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1px;background:var(--gray);border:1px solid var(--gray);border-radius:0 0 4px 4px;margin-bottom:32px;overflow:hidden}
+.cat-cell{background:var(--white);padding:16px 12px;text-align:center}
+.cat-cell .cat-name{font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.cat-cell .cat-acc{font-size:20px;font-weight:bold;color:var(--navy)}
+.cat-cell .cat-rec{font-size:11px;color:var(--muted);margin-top:2px}
+.table-wrap{margin-bottom:36px;border-radius:0 0 4px 4px;overflow:hidden;border:1px solid var(--gray)}
+table{width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:12px}
+thead th{background:var(--navy);color:var(--white);padding:9px 10px;text-align:center;font-weight:bold;font-size:11px;letter-spacing:.5px}
+thead th:first-child{text-align:left}
+tbody tr:nth-child(even){background:var(--mid)}
+tbody tr:nth-child(odd){background:var(--white)}
+tbody td{padding:8px 10px;border-bottom:1px solid var(--gray);vertical-align:middle;text-align:center}
+tbody td:first-child{font-weight:bold;color:var(--navy)}
+tbody td:first-child,tbody td:nth-child(2){text-align:left}
+.badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:bold;letter-spacing:.5px}
+.correct{background:var(--green);color:var(--white)}
+.incorrect{background:var(--red);color:var(--white)}
+.buy-yes{background:#1A5276;color:var(--white)}
+.buy-no{background:#6E2F1A;color:var(--white)}
+.closed-note{background:var(--mid);border-left:3px solid var(--navy);padding:10px 14px;font-family:Arial,sans-serif;font-size:12px;color:var(--muted)}
+.legend-box{background:var(--white);border:1px solid var(--gray);border-radius:4px;padding:18px 20px;margin-bottom:32px;font-family:Arial,sans-serif;font-size:12px;color:var(--muted)}
+.legend-box h3{font-size:12px;font-weight:bold;color:var(--navy);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px}
+footer{background:var(--navy);color:var(--gray);text-align:center;padding:24px 20px;font-family:Arial,sans-serif;font-size:11px;line-height:1.8}
+footer a{color:var(--gold);text-decoration:none}
+</style>
+"""
 
 
-def _metric_row(doc, label, value, value_color=None, sub=None):
-    """One labelled metric line — big value, small label."""
-    p = doc.add_paragraph()
-    p.paragraph_format.space_before = Pt(2)
-    p.paragraph_format.space_after  = Pt(1)
-    _run(p, f"{label}: ", size=10, bold=True, color=NAVY)
-    _run(p, str(value), size=14, bold=True, color=value_color or NAVY)
-    if sub:
-        _run(p, f"  {sub}", size=9, italic=True, color=GRAY)
+def badge(label, css_class):
+    return f'<span class="badge {css_class}">{label}</span>'
 
 
-# ── Word doc ─────────────────────────────────────────────────────────────────
+def build_html(scored, closed, stats, today_str):
+    cats = stats.get("categories", {})
 
-def build_docx(resolved_first, m_first, m_last, history, closed, out_path):
-    doc = Document()
-    sec = doc.sections[0]
-    sec.page_width  = Inches(8.5); sec.page_height = Inches(11)
-    for edge in ("left","right","top","bottom"):
-        setattr(sec, f"{edge}_margin", Inches(0.75))
-    doc.styles["Normal"].font.name = FONT
-    doc.styles["Normal"].font.size = Pt(10.5)
-
-    # Title block
-    p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p.paragraph_format.space_before = Pt(0); p.paragraph_format.space_after = Pt(4)
-    _run(p, "Axiom Forecasting Group", size=26, bold=True, color=NAVY)
-    pbdr = OxmlElement("w:pBdr"); bot = OxmlElement("w:bottom")
-    bot.set(qn("w:val"),"single"); bot.set(qn("w:sz"),"14")
-    bot.set(qn("w:color"),"17365D"); bot.set(qn("w:space"),"4")
-    pbdr.append(bot); p._p.get_or_add_pPr().append(pbdr)
-
-    p2 = doc.add_paragraph(); p2.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p2.paragraph_format.space_before = Pt(5); p2.paragraph_format.space_after = Pt(14)
-    _run(p2, "AFG Forecast Accuracy Index", size=14, bold=True, color=NAVY)
-    _run(p2, f"   |   Updated {date.today().strftime('%B %d, %Y')}", size=12, color=BLUE)
-
-    if m_first is None:
-        p3 = doc.add_paragraph()
-        p3.paragraph_format.space_before = Pt(24)
-        p3.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        _run(p3, "No resolved predictions yet.", size=12, bold=True, color=GRAY)
-        p4 = doc.add_paragraph(); p4.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        _run(p4, "The Forecast Accuracy Index populates as markets settle on Kalshi.",
-             size=10.5, italic=True, color=GRAY)
-        doc.save(out_path)
-        return
-
-    # ── Overall metrics — DUAL TRACK, equal visual weight ────────────────────
-    _heading(doc, "Overall Performance — Two Tracks")
-    p_expl = doc.add_paragraph()
-    p_expl.paragraph_format.space_after = Pt(8)
-    _run(p_expl, "AFG publishes both numbers every cycle. Neither replaces the other.",
-         size=9.5, italic=True, color=GRAY)
-
-    track_t = doc.add_table(rows=1, cols=2)
-    track_headers = ["First-Call Accuracy  (hardest test)", "Updated-Position Accuracy"]
-    for i, h in enumerate(track_headers):
-        c = track_t.rows[0].cells[i]; c.text = ""
-        _shade(c, HEADER_FILL); _borders(c, "C8D4E8")
-        cp = c.paragraphs[0]; cp.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        cp.paragraph_format.space_before = Pt(6); cp.paragraph_format.space_after = Pt(6)
-        _run(cp, h, size=10, bold=True, color=NAVY)
-
-    row = track_t.add_row()
-    for i, m in enumerate([m_first, m_last]):
-        c = row.cells[i]; c.text = ""
-        beat = m["skill_delta"] > 0
-        delta_word = "beats" if beat else "trails"
-        delta_col  = GREEN if beat else RED
-        cp = c.paragraphs[0]; cp.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        cp.paragraph_format.space_before = Pt(10); cp.paragraph_format.space_after = Pt(2)
-        _run(cp, f"{m['correct']}-{m['incorrect']}", size=26, bold=True, color=NAVY)
-        p_acc = c.add_paragraph(); p_acc.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p_acc.paragraph_format.space_after = Pt(4)
-        _run(p_acc, f"{m['accuracy']:.0%} accuracy", size=11, bold=True, color=NAVY)
-        p_br = c.add_paragraph(); p_br.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p_br.paragraph_format.space_after = Pt(2)
-        _run(p_br, f"AFG Brier {m['afg_brier']:.3f}", size=9.5, color=GRAY)
-        p_dl = c.add_paragraph(); p_dl.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p_dl.paragraph_format.space_after = Pt(10)
-        _run(p_dl, f"{delta_word} market by {abs(m['skill_delta']):.3f}",
-             size=9, bold=True, color=delta_col)
-        _borders(c, "C8D4E8")
-    _set_widths(track_t, [5400, 5400])
-
-    m = m_first  # category breakdown and recent-forecasts table use First-Call
-    resolved = resolved_first
-
-    # ── By category ───────────────────────────────────────────────────────────
-    _heading(doc, "Accuracy by Category")
-    cat_t = doc.add_table(rows=1, cols=6)
-    headers = ["Category", "Forecasts", "Correct", "Incorrect", "Accuracy", "Brier Score"]
-    for i, h in enumerate(headers):
-        c = cat_t.rows[0].cells[i]; c.text = ""
-        cp = c.paragraphs[0]
-        cp.paragraph_format.space_before = Pt(4); cp.paragraph_format.space_after = Pt(4)
-        _run(cp, h, size=9.5, bold=True, color=NAVY)
-        _shade(c, HEADER_FILL); _borders(c)
-
-    for cat in CATEGORY_ORDER:
-        d = m["by_cat"].get(cat)
-        row = cat_t.add_row()
-        vals = [
-            cat,
-            str(d["n"])         if d else "—",
-            str(d["correct"])   if d else "—",
-            str(d["incorrect"]) if d else "—",
-            f"{d['accuracy']:.0%}" if d and d["accuracy"] is not None else "—",
-            f"{d['afg_brier']:.3f}" if d else "—",
-        ]
-        colors_row = [NAVY, GRAY, GREEN, RED, NAVY, NAVY]
-        for i, (val, col) in enumerate(zip(vals, colors_row)):
-            c = row.cells[i]; c.text = ""
-            cp = c.paragraphs[0]
-            cp.paragraph_format.space_before = Pt(3); cp.paragraph_format.space_after = Pt(3)
-            _run(cp, val, size=9.5, bold=(i == 0), color=col if val != "—" else GRAY)
-            _borders(c)
-    _set_widths(cat_t, [2100, 1500, 1500, 1500, 1500, 1500])
-
-    # ── Recent resolved calls ────────────────────────────────────────────────
-    if resolved:
-        _heading(doc, "Recent Resolved Forecasts")
-
-        # Column layout (DXA, must sum to 10800 — fits portrait text column):
-        # Market | Category | Kalshi | AFG Prob | AFG Call | Outcome | Result
-        r_headers  = ["Market", "Category", "Kalshi", "AFG", "AFG Call", "Outcome", "Result"]
-        col_widths = [3500, 1300, 800, 800, 1300, 1000, 2100]  # sum = 10800
-
-        rec_t = doc.add_table(rows=1, cols=len(r_headers))
-        for i, h in enumerate(r_headers):
-            c = rec_t.rows[0].cells[i]; c.text = ""
-            cp = c.paragraphs[0]
-            cp.paragraph_format.space_before = Pt(4)
-            cp.paragraph_format.space_after  = Pt(4)
-            _run(cp, h, size=9.5, bold=True, color=NAVY)
-            _shade(c, HEADER_FILL); _borders(c)
-
-        for r in resolved[:15]:
-            hit          = call_correct(r)
-            rec_row      = rec_t.add_row()
-            result_text  = "✓ Correct"  if hit else "✗ Incorrect"
-            result_color = GREEN        if hit else RED
-            outcome_txt  = "YES"        if r["outcome"] == 1 else "NO"
-            afg_call     = r["recommendation"]   # "BUY YES" or "BUY NO"
-            call_color   = GREEN if afg_call == "BUY YES" else RED
-
-            row_vals = [
-                (r["market"][:44],          NAVY,         False),
-                (r["category"],             GRAY,         False),
-                (f"{r['kalshi_price']:.0%}", GRAY,        False),
-                (f"{r['afg_probability']:.0%}", NAVY,     False),
-                (afg_call,                  call_color,   True),
-                (outcome_txt,               GRAY,         False),
-                (result_text,               result_color, True),
-            ]
-            for i, (val, col, bold) in enumerate(row_vals):
-                c = rec_row.cells[i]; c.text = ""
-                cp = c.paragraphs[0]
-                cp.paragraph_format.space_before = Pt(3)
-                cp.paragraph_format.space_after  = Pt(3)
-                _run(cp, val, size=9, bold=bold, color=col)
-                _borders(c)
-
-        _set_widths(rec_t, col_widths)
-
-    # ── Position changes (reversals) — full disclosure ──────────────────────
-    reversals = [h for h in history if h["reversed"]]
-    if reversals:
-        _heading(doc, "Position Changes")
-        p_rv = doc.add_paragraph()
-        p_rv.paragraph_format.space_after = Pt(6)
-        _run(p_rv, "Markets where AFG's published call changed direction before "
-                   "resolution. The First-Call track above scores the original "
-                   "call; the Updated-Position track scores the call shown here "
-                   "as \"Last Call.\"", size=9, italic=True, color=GRAY)
-
-        rv_headers  = ["Market", "First Call", "First Result", "Last Call", "Last Result"]
-        rv_widths   = [3600, 1800, 1800, 1800, 1800]  # sum = 10800
-        rv_t = doc.add_table(rows=1, cols=len(rv_headers))
-        for i, h in enumerate(rv_headers):
-            c = rv_t.rows[0].cells[i]; c.text = ""
-            cp = c.paragraphs[0]
-            cp.paragraph_format.space_before = Pt(4); cp.paragraph_format.space_after = Pt(4)
-            _run(cp, h, size=9.5, bold=True, color=NAVY)
-            _shade(c, HEADER_FILL); _borders(c)
-
-        for h in reversals:
-            row = rv_t.add_row()
-            f, l = h["first"], h["last"]
-            f_hit = call_correct(f); l_hit = call_correct(l)
-            f_call_col = GREEN if f["recommendation"] == "BUY YES" else RED
-            l_call_col = GREEN if l["recommendation"] == "BUY YES" else RED
-            f_res_col  = GREEN if f_hit else RED
-            l_res_col  = GREEN if l_hit else RED
-            vals = [
-                (h["market"][:38], NAVY, False),
-                (f"{f['recommendation']} @ {f['afg_probability']:.0%}", f_call_col, True),
-                ("Correct" if f_hit else "Incorrect", f_res_col, True),
-                (f"{l['recommendation']} @ {l['afg_probability']:.0%}", l_call_col, True),
-                ("Correct" if l_hit else "Incorrect", l_res_col, True),
-            ]
-            for i, (val, col, bold) in enumerate(vals):
-                c = row.cells[i]; c.text = ""
-                cp = c.paragraphs[0]
-                cp.paragraph_format.space_before = Pt(3); cp.paragraph_format.space_after = Pt(3)
-                _run(cp, val, size=9, bold=bold, color=col)
-                _borders(c)
-        _set_widths(rv_t, rv_widths)
-
-    # ── Closed positions — full disclosure ──────────────────────────────────
-    if closed:
-        _heading(doc, "Closed Positions")
-        p_cl = doc.add_paragraph()
-        p_cl.paragraph_format.space_after = Pt(6)
-        _run(p_cl, "Contracts AFG exited before resolution. A subscriber following "
-                   "AFG held no position at settlement. The First-Call track above "
-                   "still scores the original call; the Updated-Position track "
-                   "excludes these. Shown here with the outcome so the record is "
-                   "complete.", size=9, italic=True, color=GRAY)
-
-        cl_headers = ["Market", "Original Call", "Closed", "Outcome", "Original Call Would Have"]
-        cl_widths  = [3200, 1700, 1400, 1400, 3100]  # = 10800
-        cl_t = doc.add_table(rows=1, cols=len(cl_headers))
-        for i, h in enumerate(cl_headers):
-            c = cl_t.rows[0].cells[i]; c.text = ""
-            cp = c.paragraphs[0]
-            cp.paragraph_format.space_before = Pt(4); cp.paragraph_format.space_after = Pt(4)
-            _run(cp, h, size=9.5, bold=True, color=NAVY)
-            _shade(c, HEADER_FILL); _borders(c)
-
-        for cpos in closed:
-            row = cl_t.add_row()
-            hit = cpos["would_have_hit"]
-            call_col = GREEN if cpos["first_call"] == "BUY YES" else RED
-            out_txt  = {1: "YES", 0: "NO"}.get(cpos["outcome"], "—")
-            vals = [
-                (cpos["market"][:34], NAVY, False),
-                (f"{cpos['first_call']} @ {cpos['first_prob']:.0%}", call_col, True),
-                (str(cpos["closed_date"] or "—"), GRAY, False),
-                (out_txt, NAVY, True),
-                ("been Correct" if hit else "been Incorrect", GREEN if hit else RED, True),
-            ]
-            for i, (val, col, bold) in enumerate(vals):
-                c = row.cells[i]; c.text = ""
-                cp = c.paragraphs[0]
-                cp.paragraph_format.space_before = Pt(3); cp.paragraph_format.space_after = Pt(3)
-                _run(cp, val, size=9, bold=bold, color=col)
-                _borders(c)
-        _set_widths(cl_t, cl_widths)
-
-    # footnote
-    p_fn = doc.add_paragraph()
-    p_fn.paragraph_format.space_before = Pt(16)
-    _run(p_fn, "Brier Score: 0 = perfect · 0.25 = coin flip · 1.0 = perfectly wrong.  "
-               "This report is for informational purposes only and is not financial advice.",
-         size=8.5, italic=True, color=GRAY)
-
-    doc.save(out_path)
-
-
-# ── Website ───────────────────────────────────────────────────────────────────
-
-def build_website(resolved, m, out_dir, m_last=None, history=None, closed=None):
-    os.makedirs(out_dir, exist_ok=True)
-    updated = date.today().strftime("%B %d, %Y")
-    year    = date.today().year
-    history = history or []
-    closed = closed or []
-
-    if m is None:
-        body = """
-      <div class="empty-state">
-        <div class="empty-icon">📊</div>
-        <h2>No resolved forecasts yet</h2>
-        <p>The AFG Forecast Accuracy Index populates automatically as markets settle on Kalshi.<br>
-           Check back after the first resolution date passes.</p>
-      </div>"""
-    else:
-        beat = m["skill_delta"] > 0
-        delta_cls  = "good" if beat else "bad"
-        delta_word = "outperforms" if beat else "trails"
-
-        # DUAL-TRACK comparison — equal visual weight, neither hidden
-        def _track_block(track_m, label):
-            tbeat = track_m["skill_delta"] > 0
-            tcls  = "good" if tbeat else "bad"
-            tword = "beats" if tbeat else "trails"
-            return f"""
-        <div class="track-block">
-          <div class="track-label">{label}</div>
-          <div class="track-score">{track_m['correct']}-{track_m['incorrect']}</div>
-          <div class="track-acc">{track_m['accuracy']:.0%} accuracy</div>
-          <div class="track-brier">AFG Brier {track_m['afg_brier']:.3f}</div>
-          <div class="track-delta {tcls}">{tword} market by {abs(track_m['skill_delta']):.3f}</div>
+    # Category grid cells
+    cat_cells = ""
+    for cat in ["Sports", "Economics", "Politics", "Culture", "Weather"]:
+        d = cats.get(cat, {"correct": 0, "total": 0})
+        t = d["total"]
+        c = d["correct"]
+        acc = f"{round(c/t*100)}%" if t else "—"
+        rec = f"{c} of {t} scored" if t else "No data yet"
+        cat_cells += f"""
+        <div class="cat-cell">
+          <div class="cat-name">{cat}</div>
+          <div class="cat-acc">{acc}</div>
+          <div class="cat-rec">{rec}</div>
         </div>"""
 
-        m_last_display = m_last or m
-        tracks = f"""
-      <div class="tracks-wrap">
-        <p class="tracks-note">AFG publishes both numbers every cycle. Neither replaces the other.</p>
-        <div class="tracks">
-          {_track_block(m, "First-Call Accuracy (hardest test)")}
-          {_track_block(m_last_display, "Updated-Position Accuracy")}
-        </div>
-      </div>"""
+    # Resolved forecasts rows
+    forecast_rows = ""
+    for i, r in enumerate(sorted(scored, key=lambda x: x.get("settle_date", "")), 1):
+        call_badge  = badge("BUY YES", "buy-yes") if r["final_call"] == "BUY YES" else badge("BUY NO", "buy-no")
+        result_badge = badge("✓ Correct", "correct") if r["result"] == "Correct" else badge("✗ Incorrect", "incorrect")
+        forecast_rows += f"""
+        <tr>
+          <td>{i}</td>
+          <td>{r['market']}</td>
+          <td>{r['category']}</td>
+          <td>{call_badge}</td>
+          <td>{r['afg_pct']:.0f}%</td>
+          <td>{r['kalshi_pct']:.0f}%</td>
+          <td>{r['outcome']}</td>
+          <td>{result_badge}</td>
+          <td>{r['brier']:.3f}</td>
+        </tr>"""
 
-        # headline cards (First-Call basis)
-        cards = f"""
-      <div class="cards">
-        <div class="card">
-          <div class="card-value">{m['n']}</div>
-          <div class="card-label">Total Forecasts Issued</div>
-        </div>
-        <div class="card good-card">
-          <div class="card-value good">{m['correct']}</div>
-          <div class="card-label">Correct Forecasts</div>
-        </div>
-        <div class="card bad-card">
-          <div class="card-value bad">{m['incorrect']}</div>
-          <div class="card-label">Incorrect Forecasts</div>
-        </div>
-        <div class="card">
-          <div class="card-value">{m['accuracy']:.0%}</div>
-          <div class="card-label">Overall Accuracy</div>
-        </div>
-        <div class="card">
-          <div class="card-value">{m['afg_brier']:.3f}</div>
-          <div class="card-label">AFG Brier Score</div>
-          <div class="card-sub">lower is better</div>
-        </div>
-        <div class="card muted-card">
-          <div class="card-value muted">{m['kalshi_brier']:.3f}</div>
-          <div class="card-label">Market Brier Score</div>
-          <div class="card-sub">the crowd's accuracy</div>
-        </div>
-      </div>
-      <p class="skill-line {delta_cls}">
-        AFG {delta_word} the Kalshi market by
-        <strong>{abs(m['skill_delta']):.3f} Brier points</strong>
-        across {m['n']} resolved forecasts (First-Call basis).
-      </p>"""
+    # Closed positions rows
+    closed_rows = ""
+    for i, r in enumerate(closed, 1):
+        call_badge = badge("BUY YES", "buy-yes") if r["final_call"] == "BUY YES" else badge("BUY NO", "buy-no")
+        wh = r.get("would_have", "—")
+        wh_badge = badge("✓ Correct", "correct") if "Correct" in wh else badge("✗ Incorrect", "incorrect")
+        # Parse close date for display
+        cd = _parse_date(r.get("settle_date")) or r.get("settle_date", "—")
+        closed_rows += f"""
+        <tr>
+          <td>{i}</td>
+          <td>{r['market']}</td>
+          <td>{r['category']}</td>
+          <td>{call_badge}</td>
+          <td>{r['afg_pct']:.0f}%</td>
+          <td>{cd}</td>
+          <td>{r['outcome']}</td>
+          <td>{wh_badge}</td>
+        </tr>"""
 
-        # category table
-        cat_rows = ""
-        for cat in CATEGORY_ORDER:
-            d = m["by_cat"].get(cat)
-            if d:
-                acc_pct = f"{d['accuracy']:.0%}" if d["accuracy"] is not None else "—"
-                beat_cat = d["afg_brier"] < 0.25
-                brier_cls = "good" if beat_cat else ""
-                cat_rows += f"""
-          <tr>
-            <td class="cat-name">{cat}</td>
-            <td>{d['n']}</td>
-            <td class="good">{d['correct']}</td>
-            <td class="bad">{d['incorrect']}</td>
-            <td><strong>{acc_pct}</strong></td>
-            <td class="{brier_cls}">{d['afg_brier']:.3f}</td>
-          </tr>"""
-            else:
-                cat_rows += f"<tr><td class='cat-name'>{cat}</td><td colspan='5' class='muted'>No resolved forecasts yet</td></tr>"
+    brier_gap   = round(stats["afg_brier"] - stats["mkt_brier"], 3)
+    brier_color = "var(--red)" if brier_gap > 0 else "var(--green)"
+    brier_note  = f"AFG trails market by {brier_gap:.3f} points" if brier_gap > 0 else f"AFG leads market by {abs(brier_gap):.3f} points"
 
-        # recent resolved
-        recent_rows = ""
-        for r in resolved[:20]:
-            hit = call_correct(r)
-            hit_cls  = "good" if hit else "bad"
-            hit_icon = "✓" if hit else "✗"
-            outcome  = "YES" if r["outcome"] == 1 else "NO"
-            recent_rows += f"""
-          <tr>
-            <td>{r['market'][:60]}</td>
-            <td class="cat-badge">{r['category']}</td>
-            <td>{r['kalshi_price']:.0%}</td>
-            <td><strong>{r['afg_probability']:.0%}</strong></td>
-            <td>{outcome}</td>
-            <td class="{hit_cls} result-cell">{hit_icon} {"Correct" if hit else "Incorrect"}</td>
-          </tr>"""
-
-        # position changes (reversals) — full disclosure
-        reversal_rows = ""
-        for h in history:
-            if not h["reversed"]:
-                continue
-            f, l = h["first"], h["last"]
-            f_hit = call_correct(f); l_hit = call_correct(l)
-            f_cls = "good" if f["recommendation"] == "BUY YES" else "bad"
-            l_cls = "good" if l["recommendation"] == "BUY YES" else "bad"
-            f_res_cls = "good" if f_hit else "bad"
-            l_res_cls = "good" if l_hit else "bad"
-            reversal_rows += f"""
-          <tr>
-            <td>{h['market'][:56]}</td>
-            <td class="{f_cls}">{f['recommendation']} @ {f['afg_probability']:.0%}</td>
-            <td class="{f_res_cls} result-cell">{"✓" if f_hit else "✗"} {"Correct" if f_hit else "Incorrect"}</td>
-            <td class="{l_cls}">{l['recommendation']} @ {l['afg_probability']:.0%}</td>
-            <td class="{l_res_cls} result-cell">{"✓" if l_hit else "✗"} {"Correct" if l_hit else "Incorrect"}</td>
-          </tr>"""
-
-        reversals_section = ""
-        if reversal_rows:
-            reversals_section = f"""
-      <section>
-        <h2>Position Changes</h2>
-        <p class="tracks-note">Markets where AFG's call changed direction before resolution.
-           The First-Call track scores the original call; Updated-Position scores the "Last Call" shown here.</p>
-        <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Market</th><th>First Call</th><th>First Result</th>
-              <th>Last Call</th><th>Last Result</th>
-            </tr>
-          </thead>
-          <tbody>{reversal_rows}</tbody>
-        </table>
-        </div>
-      </section>"""
-
-        closed_rows = ""
-        for cpos in closed:
-            hit = cpos["would_have_hit"]
-            call_cls = "good" if cpos["first_call"] == "BUY YES" else "bad"
-            out_txt  = {1: "YES", 0: "NO"}.get(cpos["outcome"], "—")
-            hit_cls  = "good" if hit else "bad"
-            closed_rows += f"""
-          <tr>
-            <td>{cpos['market'][:52]}</td>
-            <td class="{call_cls}">{cpos['first_call']} @ {cpos['first_prob']:.0%}</td>
-            <td>{cpos['closed_date'] or '—'}</td>
-            <td>{out_txt}</td>
-            <td class="{hit_cls} result-cell">would have been {'Correct' if hit else 'Incorrect'}</td>
-          </tr>"""
-
-        closed_section = ""
-        if closed_rows:
-            closed_section = f"""
-      <section>
-        <h2>Closed Positions</h2>
-        <p class="tracks-note">Contracts AFG exited before resolution — no live recommendation at settlement.
-           The First-Call track still scores the original call; Updated-Position excludes these.
-           Shown with outcomes so the record stays complete.</p>
-        <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Market</th><th>Original Call</th><th>Closed</th>
-              <th>Outcome</th><th>Original Call Would Have</th>
-            </tr>
-          </thead>
-          <tbody>{closed_rows}</tbody>
-        </table>
-        </div>
-      </section>"""
-
-        body = f"""
-      {tracks}
-
-      {cards}
-
-      <section>
-        <h2>Accuracy by Category</h2>
-        <p class="tracks-note">First-Call basis.</p>
-        <table>
-          <thead>
-            <tr>
-              <th>Category</th><th>Forecasts</th><th>Correct</th>
-              <th>Incorrect</th><th>Accuracy</th><th>Brier Score</th>
-            </tr>
-          </thead>
-          <tbody>{cat_rows}</tbody>
-        </table>
-      </section>
-      {reversals_section}
-      {closed_section}
-
-      <section>
-        <h2>Recent Resolved Forecasts</h2>
-        <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Market</th><th>Category</th><th>Kalshi</th>
-              <th>AFG</th><th>Outcome</th><th>Result</th>
-            </tr>
-          </thead>
-          <tbody>{recent_rows}</tbody>
-        </table>
-        </div>
-      </section>"""
-
-    html = f"""<!DOCTYPE html>
+    return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AFG Forecast Accuracy Index</title>
-  <style>
-    :root {{
-      --navy:  #17365D;
-      --blue:  #365F91;
-      --green: #1F6F3D;
-      --red:   #A6231F;
-      --green-bg: #E8F5E9;
-      --red-bg:   #FDECEA;
-      --gray:  #6B7280;
-      --line:  #E5EAF0;
-      --bg:    #F8FAFC;
-      --white: #FFFFFF;
-    }}
-    *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
-    body {{
-      font-family: Georgia, 'Cambria', serif;
-      background: var(--bg);
-      color: #1A202C;
-      line-height: 1.6;
-    }}
-
-    /* ── Header ── */
-    header {{
-      background: var(--navy);
-      color: white;
-      padding: 36px 24px 28px;
-      text-align: center;
-    }}
-    .logo-rule {{
-      width: 60px; height: 3px;
-      background: var(--blue);
-      margin: 0 auto 16px;
-      border-radius: 2px;
-    }}
-    header h1 {{ font-size: 2rem; letter-spacing: 0.02em; font-weight: 700; }}
-    header .sub {{ font-size: 1rem; color: #93B4D4; margin-top: 6px; letter-spacing: 0.05em; text-transform: uppercase; }}
-    header .updated {{ font-size: 0.82rem; color: #6A8FAF; margin-top: 8px; }}
-
-    /* ── Main ── */
-    main {{ max-width: 1040px; margin: 0 auto; padding: 36px 20px 60px; }}
-
-    /* ── Metric cards ── */
-    .cards {{
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
-      gap: 14px;
-      margin-bottom: 20px;
-    }}
-    .card {{
-      background: var(--white);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 20px 16px 16px;
-      text-align: center;
-      box-shadow: 0 1px 4px rgba(0,0,0,.05);
-    }}
-    .good-card {{ border-color: #A8D5B5; background: var(--green-bg); }}
-    .bad-card  {{ border-color: #F0B8B5; background: var(--red-bg); }}
-    .muted-card {{ background: #F1F5F9; }}
-    .card-value  {{ font-size: 2.2rem; font-weight: 700; color: var(--navy); line-height: 1.1; }}
-    .card-label  {{ font-size: 0.78rem; color: var(--gray); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 6px; }}
-    .card-sub    {{ font-size: 0.72rem; color: #9CA3AF; margin-top: 2px; }}
-    .good  {{ color: var(--green) !important; }}
-    .bad   {{ color: var(--red)   !important; }}
-    .muted {{ color: var(--gray)  !important; }}
-
-    /* ── Skill line ── */
-    .skill-line {{
-      font-size: 1.05rem;
-      text-align: center;
-      margin: 4px 0 32px;
-      padding: 12px 20px;
-      border-radius: 8px;
-      background: var(--white);
-      border: 1px solid var(--line);
-    }}
-    .skill-line.good {{ color: var(--green); border-color: #A8D5B5; background: var(--green-bg); }}
-    .skill-line.bad  {{ color: var(--red);   border-color: #F0B8B5; background: var(--red-bg); }}
-
-    /* ── Dual-track comparison ── */
-    .tracks-wrap {{ margin-bottom: 24px; }}
-    .tracks-note {{ font-size: 0.82rem; color: var(--gray); text-align: center; margin-bottom: 12px; font-style: italic; }}
-    .tracks {{
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }}
-    .track-block {{
-      background: var(--white);
-      border: 2px solid var(--blue);
-      border-radius: 12px;
-      padding: 16px;
-      text-align: center;
-    }}
-    .track-label {{ font-size: 0.8rem; font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 8px; }}
-    .track-score {{ font-size: 1.8rem; font-weight: 700; color: var(--navy); }}
-    .track-acc   {{ font-size: 0.95rem; font-weight: 700; color: var(--navy); margin-top: 2px; }}
-    .track-brier {{ font-size: 0.82rem; color: var(--gray); margin-top: 4px; }}
-    .track-delta {{ font-size: 0.8rem; font-weight: 700; margin-top: 6px; }}
-    .track-delta.good {{ color: var(--green); }}
-    .track-delta.bad  {{ color: var(--red); }}
-    @media (max-width: 640px) {{ .tracks {{ grid-template-columns: 1fr; }} }}
-
-    /* ── Section headings ── */
-    section {{ margin-top: 36px; }}
-    h2 {{
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--navy);
-      border-bottom: 2px solid var(--blue);
-      padding-bottom: 6px;
-      margin-bottom: 14px;
-      letter-spacing: 0.01em;
-    }}
-
-    /* ── Tables ── */
-    .table-wrap {{ overflow-x: auto; }}
-    table {{
-      border-collapse: collapse;
-      width: 100%;
-      font-size: 0.92rem;
-      background: var(--white);
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 1px 4px rgba(0,0,0,.04);
-    }}
-    th {{
-      background: #DCE6F1;
-      color: var(--navy);
-      font-weight: 700;
-      text-align: left;
-      padding: 10px 14px;
-      border-bottom: 2px solid var(--blue);
-      font-size: 0.85rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }}
-    td {{
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--line);
-      vertical-align: middle;
-    }}
-    tbody tr:last-child td {{ border-bottom: none; }}
-    tbody tr:hover {{ background: #F0F4FA; }}
-    .cat-name  {{ font-weight: 700; color: var(--navy); }}
-    .cat-badge {{
-      font-size: 0.78rem;
-      background: #EEF2F8;
-      color: var(--blue);
-      padding: 2px 8px;
-      border-radius: 12px;
-      white-space: nowrap;
-      font-weight: 600;
-    }}
-    .result-cell {{ font-weight: 700; font-size: 0.9rem; }}
-
-    /* ── Empty state ── */
-    .empty-state {{
-      text-align: center;
-      padding: 64px 20px;
-      color: var(--gray);
-    }}
-    .empty-icon {{ font-size: 3rem; margin-bottom: 16px; }}
-    .empty-state h2 {{ font-size: 1.3rem; color: var(--navy); margin-bottom: 10px; }}
-    .empty-state p  {{ font-size: 0.95rem; line-height: 1.7; }}
-
-    /* ── Footer ── */
-    footer {{
-      background: var(--navy);
-      color: #6A8FAF;
-      font-size: 0.82rem;
-      text-align: center;
-      padding: 24px 20px;
-      margin-top: 60px;
-      line-height: 1.7;
-    }}
-    footer strong {{ color: #93B4D4; }}
-
-    /* ── Mobile ── */
-    @media (max-width: 640px) {{
-      header h1 {{ font-size: 1.4rem; }}
-      .cards {{ grid-template-columns: repeat(2, 1fr); }}
-      .card-value {{ font-size: 1.7rem; }}
-    }}
-  </style>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AFG Forecast Accuracy Index — Axiom Forecasting Group</title>
+  {STYLES}
 </head>
 <body>
-  <header>
-    <div class="logo-rule"></div>
-    <h1>AFG Forecast Accuracy Index</h1>
-    <div class="sub">Axiom Forecasting Group · Prediction Markets Research</div>
-    <div class="updated">Last updated {updated}</div>
-  </header>
+<header>
+  <div class="eyebrow">Axiom Forecasting Group</div>
+  <h1>AFG Forecast Accuracy Index</h1>
+  <div class="subtitle">Kalshi prediction market research · Sports · Economics · Politics · Culture · Weather</div>
+  <div class="updated">Last updated: {today_str}</div>
+</header>
+<main>
+  <div class="methodology-banner">
+    <strong>Scoring methodology revised November 6th, 2026.</strong>
+    AFG is scored on the <strong>final published call</strong> at the time of contract settlement only.
+    Bayesian updating — revising a position as new evidence arrives — is correct forecasting behavior and carries no penalty.
+    Closed positions (NO TRADE at settlement) are excluded from the win/loss record and disclosed separately below.
+  </div>
 
-  <main>
-    {body}
-  </main>
+  <div class="section-title">Final-Call Accuracy — Summary</div>
+  <div class="summary-grid">
+    <div class="stat-cell highlight">
+      <div class="stat-label">Final-Call Accuracy</div>
+      <div class="stat-value">{stats['accuracy']}%</div>
+      <div class="stat-sub">{stats['correct']} correct of {stats['n']} scored</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Total Settled</div>
+      <div class="stat-value">{stats['n'] + len(closed)}</div>
+      <div class="stat-sub">contracts resolved</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Scored</div>
+      <div class="stat-value">{stats['n']}</div>
+      <div class="stat-sub">live call at settlement</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Correct</div>
+      <div class="stat-value">{stats['correct']}</div>
+      <div class="stat-sub">final call matched outcome</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Incorrect</div>
+      <div class="stat-value">{stats['incorrect']}</div>
+      <div class="stat-sub">final call missed</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Excluded</div>
+      <div class="stat-value">{len(closed)}</div>
+      <div class="stat-sub">closed before settlement</div>
+    </div>
+  </div>
 
-  <footer>
-    <strong>Brier Score:</strong> 0 = perfect &nbsp;·&nbsp; 0.25 = coin flip &nbsp;·&nbsp;
-    1.0 = perfectly wrong &nbsp;·&nbsp; Lower is better.<br>
-    AFG publishes calibrated probability estimates on Kalshi prediction markets every Monday, Wednesday, and Friday.<br>
-    This index is for informational purposes only and does not constitute financial advice.
-    &copy; {year} Axiom Forecasting Group
-  </footer>
+  <div class="section-title">Calibration — Brier Score Comparison</div>
+  <div class="brier-row">
+    <div class="brier-cell afg">
+      <div class="label">AFG Brier Score</div>
+      <div class="value">{stats['afg_brier']:.3f}</div>
+      <div class="note">Lower is better · Final call probabilities</div>
+    </div>
+    <div class="brier-cell mkt">
+      <div class="label">Market (Kalshi) Brier Score</div>
+      <div class="value">{stats['mkt_brier']:.3f}</div>
+      <div class="note">Market price at time of final call</div>
+    </div>
+  </div>
+
+  <div class="section-title">Final-Call Accuracy by Category</div>
+  <div class="cat-grid">{cat_cells}
+  </div>
+
+  <div class="section-title">All Resolved Forecasts</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>Contract</th><th>Category</th><th>Final Call</th>
+          <th>AFG %</th><th>Market %</th><th>Settled</th><th>Result</th><th>Brier</th>
+        </tr>
+      </thead>
+      <tbody>{forecast_rows}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section-title">Closed Positions — Disclosure Table</div>
+  <div class="closed-note">
+    These positions were exited (NO TRADE) before contract settlement.
+    They are excluded from the win/loss record.
+    "Would Have Been" shows the hypothetical result had the position been held to settlement.
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>Contract</th><th>Category</th><th>Last Call</th>
+          <th>AFG %</th><th>Closed</th><th>Settled</th><th>Would Have Been</th>
+        </tr>
+      </thead>
+      <tbody>{closed_rows}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="legend-box">
+    <h3>What is a Brier Score?</h3>
+    <p>A Brier score measures probability calibration. It is calculated as (AFG probability − actual outcome)².
+    <strong>Lower is better.</strong> A perfect score is 0.000. Random guessing scores 0.250.
+    AFG's goal is to score lower than the Kalshi market price on every resolved contract.</p>
+    <br/>
+    <p><strong>AFG Brier: {stats['afg_brier']:.3f}</strong> &nbsp;·&nbsp;
+    <strong>Market Brier: {stats['mkt_brier']:.3f}</strong> &nbsp;·&nbsp;
+    <span style="color:{brier_color}">{brier_note}</span> across {stats['n']} scored positions.</p>
+  </div>
+
+  <div class="legend-box">
+    <h3>Publishing Cadence &amp; Methodology</h3>
+    <p>AFG publishes research every <strong>Monday, Wednesday, and Friday</strong>.
+    Each cycle covers the top five highest-volume Kalshi markets in Sports, Economics, Politics,
+    Culture, and Weather &amp; Climate. Probabilities are derived using Bayesian reasoning,
+    historical base rates, and behavioral finance principles.</p>
+    <br/>
+    <p>Scoring uses <strong>final-call accuracy only</strong> — the most recently published
+    recommendation at the time of contract settlement. All position changes are logged internally
+    for calibration analysis.
+    Subscribe at <a href="https://axiomforecastinggroup.substack.com/welcome" target="_blank">axiomforecastinggroup.substack.com</a>.</p>
+  </div>
+</main>
+<footer>
+  <p><strong style="color:var(--gold)">Axiom Forecasting Group</strong></p>
+  <p style="margin-top:6px">
+    <a href="https://axiomforecastinggroup.substack.com/welcome" target="_blank">Substack</a>
+    &nbsp;·&nbsp;
+    <a href="https://scowlfaceq02.github.io/afg-scorecard/" target="_blank">Scorecard</a>
+  </p>
+  <p style="margin-top:10px;font-size:10px;color:#888">
+    For informational purposes only. Not financial or investment advice.
+    All forecasts are probabilistic estimates subject to revision as new information becomes available.
+  </p>
+</footer>
 </body>
 </html>"""
 
-    with open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8") as f:
-        f.write(html)
 
+# ── WORD SCORECARD ────────────────────────────────────────────────────────────
 
-# ── main ─────────────────────────────────────────────────────────────────────
+def build_word_scorecard(scored, closed, stats, today_str, out_path):
+    """Build a Word .docx scorecard with final-call only scoring."""
+    try:
+        from docx import Document
+        from docx.shared import Pt, RGBColor, Inches
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        from docx.oxml.ns import qn
+        import docx.oxml as oxml
+    except ImportError:
+        print("python-docx not installed — skipping Word scorecard. Run: pip install python-docx")
+        return
 
-def build_resolution_post(resolved, m, out_path):
-    """
-    Social post announcing the most recent resolution(s), for pairing with a
-    screenshot of the Forecast Accuracy Index. Written to be pasted directly.
-    """
-    if not resolved or m is None:
-        return None
+    doc = Document()
 
-    # "Latest" = most recently SETTLED, i.e. the largest close date that has
-    # already passed. Sorting purely by close_date would surface a market whose
-    # nominal close date is still in the future but which resolved early.
-    today = date.today().isoformat()
-    settled = [r for r in resolved if str(r.get("contract_close_date") or "") <= today]
-    latest = (sorted(settled, key=lambda r: str(r.get("contract_close_date") or ""))[-1]
-              if settled else resolved[0])
-    hit    = call_correct(latest)
-    verdict = "Correct." if hit else "Wrong."
-    outcome = "YES" if latest["outcome"] == 1 else "NO"
+    # Narrow margins
+    for section in doc.sections:
+        section.top_margin    = Inches(0.75)
+        section.bottom_margin = Inches(0.75)
+        section.left_margin   = Inches(0.9)
+        section.right_margin  = Inches(0.9)
 
-    beat = m["skill_delta"] > 0
-    standing = (
-        f"AFG {'leads' if beat else 'trails'} the market "
-        f"{m['afg_brier']:.3f} to {m['kalshi_brier']:.3f} on Brier score "
-        f"across {m['n']} resolved forecast{'s' if m['n'] != 1 else ''}."
+    NAVY  = RGBColor(0x0D, 0x1B, 0x2A)
+    GOLD  = RGBColor(0xC9, 0xA8, 0x4C)
+    GREEN = RGBColor(0x1A, 0x7A, 0x4A)
+    RED   = RGBColor(0xB2, 0x22, 0x22)
+    WHITE = RGBColor(0xFF, 0xFF, 0xFF)
+
+    def set_cell_bg(cell, hex_color):
+        tc   = cell._tc
+        tcPr = tc.get_or_add_tcPr()
+        shd  = oxml.OxmlElement("w:shd")
+        shd.set(qn("w:val"), "clear")
+        shd.set(qn("w:color"), "auto")
+        shd.set(qn("w:fill"), hex_color)
+        tcPr.append(shd)
+
+    # Title
+    title = doc.add_heading("AFG FORECAST ACCURACY INDEX", level=1)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    for run in title.runs:
+        run.font.color.rgb = NAVY
+        run.font.size = Pt(16)
+
+    sub = doc.add_paragraph(f"Axiom Forecasting Group  ·  Final-Call Only Scoring  ·  {today_str}")
+    sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    sub.runs[0].font.size = Pt(10)
+    sub.runs[0].font.color.rgb = GOLD
+
+    doc.add_paragraph()
+
+    # Summary stats
+    summ = doc.add_paragraph()
+    summ.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r = summ.add_run(
+        f"Scored: {stats['n']}    Correct: {stats['correct']}    "
+        f"Incorrect: {stats['incorrect']}    Accuracy: {stats['accuracy']}%    "
+        f"AFG Brier: {stats['afg_brier']:.3f}    Market Brier: {stats['mkt_brier']:.3f}    "
+        f"Excluded (Closed): {len(closed)}"
     )
+    r.font.bold = True
+    r.font.size = Pt(10)
 
-    post = (
-        f"RESOLVED — {latest['market']}\n\n"
-        f"Kalshi had it at {latest['kalshi_price']:.0%}. "
-        f"AFG said {latest['afg_probability']:.0%} and called {latest['recommendation']}.\n"
-        f"Settled {outcome}. {verdict}\n\n"
-        f"Record: {m['correct']}-{m['incorrect']} ({m['accuracy']:.0%}). {standing}\n\n"
-        f"Full index: https://scowlfaceq02.github.io/afg-scorecard/\n\n"
-        f"#PredictionMarkets #Kalshi"
+    doc.add_paragraph()
+
+    # Resolved forecasts table
+    hdr = doc.add_heading("All Resolved Forecasts — Final-Call Only", level=2)
+    hdr.runs[0].font.color.rgb = NAVY
+
+    t = doc.add_table(rows=1, cols=8)
+    t.style = "Table Grid"
+    hdrs = ["#", "Contract", "Category", "Final Call", "AFG %", "Market %", "Settled", "Result"]
+    for i, h in enumerate(hdrs):
+        cell = t.rows[0].cells[i]
+        cell.text = h
+        cell.paragraphs[0].runs[0].font.bold  = True
+        cell.paragraphs[0].runs[0].font.color.rgb = WHITE
+        cell.paragraphs[0].runs[0].font.size  = Pt(9)
+        set_cell_bg(cell, "0D1B2A")
+
+    for idx, r in enumerate(sorted(scored, key=lambda x: x.get("settle_date", "")), 1):
+        row = t.add_row()
+        vals = [
+            str(idx), r["market"], r["category"], r["final_call"],
+            f"{r['afg_pct']:.0f}%", f"{r['kalshi_pct']:.0f}%",
+            r["outcome"],
+            "✓ Correct" if r["result"] == "Correct" else "✗ Incorrect"
+        ]
+        for i, v in enumerate(vals):
+            cell = row.cells[i]
+            cell.text = v
+            run = cell.paragraphs[0].runs[0]
+            run.font.size = Pt(9)
+            if i == 7:
+                run.font.bold = True
+                run.font.color.rgb = GREEN if r["result"] == "Correct" else RED
+
+    doc.add_paragraph()
+
+    # Closed positions table
+    hdr2 = doc.add_heading("Closed Positions — Disclosure Table", level=2)
+    hdr2.runs[0].font.color.rgb = NAVY
+
+    note = doc.add_paragraph(
+        "Excluded from win/loss record. 'Would Have Been' shows hypothetical result had position been held to settlement."
     )
+    note.runs[0].font.size = Pt(9)
+    note.runs[0].font.color.rgb = RGBColor(0x55, 0x55, 0x55)
 
-    with open(out_path, "w", encoding="utf-8") as f:
-        f.write(f"AFG RESOLUTION POST — {date.today().strftime('%B %d, %Y')}\n")
-        f.write("=" * 60 + "\n")
-        f.write("Paste below into X/Twitter. Attach a screenshot of the\n")
-        f.write("Forecast Accuracy Index dashboard.\n")
-        f.write("=" * 60 + "\n\n")
-        f.write(post)
-        f.write("\n\n" + "=" * 60 + "\n")
-        f.write(f"Character count: {len(post)}\n")
-    return out_path
+    t2 = doc.add_table(rows=1, cols=7)
+    t2.style = "Table Grid"
+    hdrs2 = ["#", "Contract", "Category", "Last Call", "AFG %", "Settled", "Would Have Been"]
+    for i, h in enumerate(hdrs2):
+        cell = t2.rows[0].cells[i]
+        cell.text = h
+        cell.paragraphs[0].runs[0].font.bold = True
+        cell.paragraphs[0].runs[0].font.color.rgb = WHITE
+        cell.paragraphs[0].runs[0].font.size = Pt(9)
+        set_cell_bg(cell, "444444")
 
+    for idx, r in enumerate(closed, 1):
+        row = t2.add_row()
+        wh = r.get("would_have", "—")
+        vals = [
+            str(idx), r["market"], r["category"], r["final_call"],
+            f"{r['afg_pct']:.0f}%", r["outcome"], wh
+        ]
+        for i, v in enumerate(vals):
+            cell = row.cells[i]
+            cell.text = v
+            run = cell.paragraphs[0].runs[0]
+            run.font.size = Pt(9)
+            if i == 6:
+                run.font.bold = True
+                run.font.color.rgb = GREEN if "Correct" in wh else RED
+
+    doc.save(out_path)
+    print(f"Word scorecard saved: {out_path}")
+
+
+# ── RESOLUTION SOCIAL POST ────────────────────────────────────────────────────
+
+def build_resolution_post(newly_resolved, today_str, out_dir):
+    """Write a Twitter/X resolution post for any newly settled contracts."""
+    if not newly_resolved:
+        return
+    lines = [f"AFG Resolution Update — {today_str}", ""]
+    for r in newly_resolved:
+        result = r.get("result", "")
+        emoji  = "✅" if result == "Correct" else "❌"
+        lines.append(
+            f"{emoji} {r['market']} settled {r['outcome']}. "
+            f"AFG final call: {r['final_call']} @ {r['afg_pct']:.0f}%. "
+            f"{'Correct.' if result == 'Correct' else 'Incorrect.'}"
+        )
+    lines += ["", "Track record → https://scowlfaceq02.github.io/afg-scorecard/"]
+    out = os.path.join(out_dir, f"AFG_Resolution_Post_{today_str}.txt")
+    with open(out, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+    print(f"Resolution post: {out}")
+
+
+# ── MAIN ──────────────────────────────────────────────────────────────────────
 
 def main():
-    os.makedirs(DOCX_DIR, exist_ok=True)
+    os.makedirs(SCORECARD_DIR, exist_ok=True)
+    os.makedirs(DOCS_DIR,      exist_ok=True)
 
-    # INTEGRITY CHECK
-    with get_conn() as conn:
-        n_open     = conn.execute("SELECT COUNT(*) FROM predictions WHERE status='Open'").fetchone()[0]
-        n_resolved = conn.execute("SELECT COUNT(*) FROM predictions WHERE status='Resolved'").fetchone()[0]
-    print(f"=== SCORECARD INTEGRITY CHECK ===")
-    print(f"  Total logged    : {n_open + n_resolved}")
-    print(f"  Open            : {n_open}")
-    print(f"  Resolved        : {n_resolved}")
+    conn = get_connection()
+    scored, closed = fetch_scored_positions(conn)
+    conn.close()
 
-    # Guard against false resolutions: no market may be marked Resolved
-    # while its contract close date is still in the future.
-    import datetime
-    try:
-        from db import _parse_date
-    except ImportError:
-        _parse_date = None
-    if _parse_date:
-        today_d = datetime.date.today()
+    stats    = compute_stats(scored)
+    today_str = datetime.now().strftime("%B %d, %Y")
 
-        # Load verified early resolutions allowlist
-        import os as _os
-        allowlist = set()
-        if _os.path.exists("verified_early_resolutions.txt"):
-            for _line in open("verified_early_resolutions.txt", encoding="utf-8"):
-                _line = _line.strip()
-                if not _line or _line.startswith("#"):
-                    continue
-                _tkr = _line.split("|")[0].strip()
-                if _tkr:
-                    allowlist.add(_tkr)
+    print(f"\n{'='*60}")
+    print(f"AFG SCORECARD — FINAL-CALL ONLY — {today_str}")
+    print(f"{'='*60}")
+    print(f"Scored positions : {stats['n']}")
+    print(f"Correct          : {stats['correct']}")
+    print(f"Incorrect        : {stats['incorrect']}")
+    print(f"Accuracy         : {stats['accuracy']}%")
+    print(f"AFG Brier        : {stats['afg_brier']:.3f}")
+    print(f"Market Brier     : {stats['mkt_brier']:.3f}")
+    print(f"Excluded (closed): {len(closed)}")
 
-        with get_conn() as conn:
-            res_rows = [dict(r) for r in conn.execute(
-                "SELECT market, kalshi_ticker, contract_close_date "
-                "FROM predictions WHERE status='Resolved'"
-            ).fetchall()]
-        premature = []
-        for r in res_rows:
-            close = _parse_date(r.get("contract_close_date"))
-            tkr = r.get("kalshi_ticker") or ""
-            if close and close > today_d and tkr not in allowlist:
-                premature.append((r["market"], tkr, close))
-        if premature:
-            print("")
-            print("  *** STOP — PREMATURE RESOLUTION DETECTED ***")
-            for mkt, tkr, close in premature:
-                print(f"    {mkt} ({tkr}) closes {close} — still in the future.")
-            print("  These markets cannot have settled. Revert them to Open")
-            print("  before publishing. Do NOT push this scorecard.")
-            print("")
-        elif allowlist:
-            verified = [r for r in res_rows
-                        if (r.get("kalshi_ticker") or "") in allowlist]
-            if verified:
-                print(f"  Allowlisted early settlements: "
-                      f"{[r['kalshi_ticker'] for r in verified]}")
-    if n_resolved > 0:
-        print(f"  WARNING: {n_resolved} resolved calls will be published.")
-        print(f"  Confirm each against actual Kalshi settlement before releasing.")
-    else:
-        print(f"  Output will show: no resolved forecasts yet.")
-    print(f"=================================")
+    # Premature resolution guard
+    today_date = date.today()
+    for r in scored:
+        settle = _parse_date(r.get("settle_date"))
+        if settle and settle > today_date:
+            print(f"\nSTOP: {r['ticker']} shows as Resolved but close date {settle} is in the future.")
+            print("Run the premature-resolution fix before proceeding.")
+            sys.exit(1)
 
-    resolved_first = load_resolved(mode="first")
-    resolved_last  = load_resolved(mode="last")
-    history        = load_position_history()
-    closed         = load_closed_positions()
-    m_first = compute_metrics(resolved_first)
-    m_last  = compute_metrics(resolved_last)
+    # Build HTML
+    html = build_html(scored, closed, stats, today_str)
+    html_path = os.path.join(DOCS_DIR, "index.html")
+    with open(html_path, "w", encoding="utf-8") as f:
+        f.write(html)
+    print(f"\nHTML scorecard  : {html_path}")
 
-    if closed:
-        print(f"  Closed positions: {len(closed)} contract(s) AFG exited before "
-              f"resolution — excluded from Updated-Position, disclosed separately.")
-    n_reversals = sum(1 for h in history if h["reversed"])
-    if n_reversals:
-        print(f"  Position changes: {n_reversals} market(s) where AFG's call "
-              f"reversed before resolution. Both tracks shown in the scorecard.")
+    # Build Word scorecard
+    word_path = os.path.join(SCORECARD_DIR, f"AFG_Scorecard_{TODAY}.docx")
+    build_word_scorecard(scored, closed, stats, today_str, word_path)
 
-    docx_path = f"{DOCX_DIR}/AFG_Scorecard_{date.today().isoformat()}.docx"
-    build_docx(resolved_first, m_first, m_last, history, closed, docx_path)
-    build_website(resolved_first, m_first, WEB_DIR, m_last=m_last, history=history, closed=closed)
-    post_path = f"{DOCX_DIR}/AFG_Resolution_Post_{date.today().isoformat()}.txt"
-    build_resolution_post(resolved_first, m_first, post_path)
+    # Resolution post (all newly resolved since last run — caller filters if needed)
+    build_resolution_post(scored[-3:] if scored else [], TODAY, SCORECARD_DIR)
 
-    print(f"Wrote {docx_path}")
-    print(f"Wrote {WEB_DIR}/index.html")
-    if resolved_first:
-        print(f"Wrote {post_path}")
-    if m_first:
-        print(f"  First-Call:       {m_first['n']} resolved | Brier {m_first['afg_brier']:.3f} "
-              f"vs market {m_first['kalshi_brier']:.3f} | Accuracy {m_first['accuracy']:.0%}")
-        print(f"  Updated-Position: {m_last['n']} resolved | Brier {m_last['afg_brier']:.3f} "
-              f"vs market {m_last['kalshi_brier']:.3f} | Accuracy {m_last['accuracy']:.0%}")
-    else:
-        print(f"  No resolved forecasts — index will populate as markets settle.")
+    print(f"\nDone. Git push to publish: git add -A && git commit -m \"scorecard {TODAY}\" && git push")
 
 
 if __name__ == "__main__":
