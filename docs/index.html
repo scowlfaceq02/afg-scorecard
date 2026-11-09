@@ -1,349 +1,99 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>AFG Forecast Accuracy Index — Axiom Forecasting Group</title>
-  <style>
-    :root {
-      --navy:   #0D1B2A;
-      --gold:   #C9A84C;
-      --white:  #FFFFFF;
-      --light:  #F5F5F0;
-      --mid:    #E8E8E2;
-      --gray:   #CCCCCC;
-      --green:  #1A7A4A;
-      --red:    #B22222;
-      --text:   #1A1A1A;
-      --muted:  #555555;
-    }
+  
+<style>
+:root{--navy:#0D1B2A;--gold:#C9A84C;--white:#FFFFFF;--light:#F5F5F0;
+--mid:#E8E8E2;--gray:#CCCCCC;--green:#1A7A4A;--red:#B22222;--text:#1A1A1A;--muted:#555}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Georgia,serif;background:var(--light);color:var(--text);line-height:1.6}
+header{background:var(--navy);padding:36px 24px 28px;text-align:center}
+header .eyebrow{font-family:Arial,sans-serif;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+header h1{font-size:26px;font-weight:bold;color:var(--white);margin-bottom:6px}
+header .subtitle{font-size:13px;color:var(--gray);font-style:italic}
+header .updated{margin-top:10px;font-family:Arial,sans-serif;font-size:11px;color:var(--gold);letter-spacing:1px}
+main{max-width:960px;margin:0 auto;padding:32px 20px 60px}
+.methodology-banner{background:var(--navy);color:var(--gold);border-left:4px solid var(--gold);padding:14px 18px;border-radius:4px;margin-bottom:28px;font-family:Arial,sans-serif;font-size:13px;line-height:1.6}
+.methodology-banner strong{color:var(--white)}
+.section-title{font-family:Arial,sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);background:var(--navy);padding:8px 14px;border-radius:3px 3px 0 0}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--gray);border:1px solid var(--gray);border-radius:0 0 4px 4px;margin-bottom:32px;overflow:hidden}
+.stat-cell{background:var(--white);padding:18px 14px;text-align:center}
+.stat-cell .stat-label{font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.stat-cell .stat-value{font-size:24px;font-weight:bold;color:var(--navy);line-height:1.1}
+.stat-cell .stat-sub{font-size:11px;color:var(--muted);margin-top:3px}
+.stat-cell.highlight .stat-value{color:var(--green)}
+.brier-row{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--gray);border:1px solid var(--gray);border-radius:0 0 4px 4px;margin-bottom:32px;overflow:hidden}
+.brier-cell{background:var(--white);padding:16px 18px;text-align:center}
+.brier-cell .label{font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.brier-cell .value{font-size:22px;font-weight:bold}
+.brier-cell.afg .value{color:var(--red)}
+.brier-cell.mkt .value{color:var(--green)}
+.brier-cell .note{font-size:11px;color:var(--muted);margin-top:4px;font-style:italic}
+.cat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1px;background:var(--gray);border:1px solid var(--gray);border-radius:0 0 4px 4px;margin-bottom:32px;overflow:hidden}
+.cat-cell{background:var(--white);padding:16px 12px;text-align:center}
+.cat-cell .cat-name{font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.cat-cell .cat-acc{font-size:20px;font-weight:bold;color:var(--navy)}
+.cat-cell .cat-rec{font-size:11px;color:var(--muted);margin-top:2px}
+.table-wrap{margin-bottom:36px;border-radius:0 0 4px 4px;overflow:hidden;border:1px solid var(--gray)}
+table{width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:12px}
+thead th{background:var(--navy);color:var(--white);padding:9px 10px;text-align:center;font-weight:bold;font-size:11px;letter-spacing:.5px}
+thead th:first-child{text-align:left}
+tbody tr:nth-child(even){background:var(--mid)}
+tbody tr:nth-child(odd){background:var(--white)}
+tbody td{padding:8px 10px;border-bottom:1px solid var(--gray);vertical-align:middle;text-align:center}
+tbody td:first-child{font-weight:bold;color:var(--navy)}
+tbody td:first-child,tbody td:nth-child(2){text-align:left}
+.badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:bold;letter-spacing:.5px}
+.correct{background:var(--green);color:var(--white)}
+.incorrect{background:var(--red);color:var(--white)}
+.buy-yes{background:#1A5276;color:var(--white)}
+.buy-no{background:#6E2F1A;color:var(--white)}
+.closed-note{background:var(--mid);border-left:3px solid var(--navy);padding:10px 14px;font-family:Arial,sans-serif;font-size:12px;color:var(--muted)}
+.legend-box{background:var(--white);border:1px solid var(--gray);border-radius:4px;padding:18px 20px;margin-bottom:32px;font-family:Arial,sans-serif;font-size:12px;color:var(--muted)}
+.legend-box h3{font-size:12px;font-weight:bold;color:var(--navy);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px}
+footer{background:var(--navy);color:var(--gray);text-align:center;padding:24px 20px;font-family:Arial,sans-serif;font-size:11px;line-height:1.8}
+footer a{color:var(--gold);text-decoration:none}
+</style>
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: 'Georgia', serif;
-      background: var(--light);
-      color: var(--text);
-      line-height: 1.6;
-    }
-
-    /* ── HEADER ── */
-    header {
-      background: var(--navy);
-      padding: 36px 24px 28px;
-      text-align: center;
-    }
-    header .eyebrow {
-      font-family: 'Arial', sans-serif;
-      font-size: 11px;
-      letter-spacing: 2.5px;
-      text-transform: uppercase;
-      color: var(--gold);
-      margin-bottom: 8px;
-    }
-    header h1 {
-      font-size: 26px;
-      font-weight: bold;
-      color: var(--white);
-      margin-bottom: 6px;
-    }
-    header .subtitle {
-      font-size: 13px;
-      color: var(--gray);
-      font-style: italic;
-    }
-    header .updated {
-      margin-top: 10px;
-      font-family: 'Arial', sans-serif;
-      font-size: 11px;
-      color: var(--gold);
-      letter-spacing: 1px;
-    }
-
-    /* ── MAIN CONTAINER ── */
-    main {
-      max-width: 960px;
-      margin: 0 auto;
-      padding: 32px 20px 60px;
-    }
-
-    /* ── METHODOLOGY NOTICE ── */
-    .methodology-banner {
-      background: var(--navy);
-      color: var(--gold);
-      border-left: 4px solid var(--gold);
-      padding: 14px 18px;
-      border-radius: 4px;
-      margin-bottom: 28px;
-      font-family: 'Arial', sans-serif;
-      font-size: 13px;
-      line-height: 1.6;
-    }
-    .methodology-banner strong { color: var(--white); }
-
-    /* ── SECTION HEADERS ── */
-    .section-title {
-      font-family: 'Arial', sans-serif;
-      font-size: 11px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--gold);
-      background: var(--navy);
-      padding: 8px 14px;
-      border-radius: 3px 3px 0 0;
-      margin-bottom: 0;
-    }
-
-    /* ── SUMMARY STATS ── */
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 1px;
-      background: var(--gray);
-      border: 1px solid var(--gray);
-      border-radius: 0 0 4px 4px;
-      margin-bottom: 32px;
-      overflow: hidden;
-    }
-    .stat-cell {
-      background: var(--white);
-      padding: 18px 14px;
-      text-align: center;
-    }
-    .stat-cell .stat-label {
-      font-family: 'Arial', sans-serif;
-      font-size: 10px;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 6px;
-    }
-    .stat-cell .stat-value {
-      font-size: 24px;
-      font-weight: bold;
-      color: var(--navy);
-      line-height: 1.1;
-    }
-    .stat-cell .stat-sub {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 3px;
-    }
-    .stat-cell.highlight .stat-value { color: var(--green); }
-    .stat-cell.brier-afg .stat-value  { color: var(--red); }
-
-    /* ── BRIER COMPARISON ── */
-    .brier-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1px;
-      background: var(--gray);
-      border: 1px solid var(--gray);
-      border-radius: 0 0 4px 4px;
-      margin-bottom: 32px;
-      overflow: hidden;
-    }
-    .brier-cell {
-      background: var(--white);
-      padding: 16px 18px;
-      text-align: center;
-    }
-    .brier-cell .label {
-      font-family: 'Arial', sans-serif;
-      font-size: 10px;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 4px;
-    }
-    .brier-cell .value {
-      font-size: 22px;
-      font-weight: bold;
-    }
-    .brier-cell.afg .value  { color: var(--red); }
-    .brier-cell.mkt .value  { color: var(--green); }
-    .brier-cell .note {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 4px;
-      font-style: italic;
-    }
-
-    /* ── TABLES ── */
-    .table-wrap {
-      margin-bottom: 36px;
-      border-radius: 0 0 4px 4px;
-      overflow: hidden;
-      border: 1px solid var(--gray);
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-family: 'Arial', sans-serif;
-      font-size: 12px;
-    }
-    thead th {
-      background: var(--navy);
-      color: var(--white);
-      padding: 9px 10px;
-      text-align: center;
-      font-weight: bold;
-      font-size: 11px;
-      letter-spacing: 0.5px;
-    }
-    thead th:first-child { text-align: left; }
-    tbody tr:nth-child(even) { background: var(--mid); }
-    tbody tr:nth-child(odd)  { background: var(--white); }
-    tbody td {
-      padding: 8px 10px;
-      border-bottom: 1px solid var(--gray);
-      vertical-align: middle;
-    }
-    tbody td:first-child { font-weight: bold; color: var(--navy); }
-    tbody td { text-align: center; }
-    tbody td:first-child,
-    tbody td:nth-child(2) { text-align: left; }
-
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 3px;
-      font-size: 11px;
-      font-weight: bold;
-      letter-spacing: 0.5px;
-    }
-    .correct   { background: var(--green); color: var(--white); }
-    .incorrect { background: var(--red);   color: var(--white); }
-    .excluded  { background: #888;         color: var(--white); }
-    .buy-yes   { background: #1A5276; color: var(--white); }
-    .buy-no    { background: #6E2F1A; color: var(--white); }
-
-    /* ── CATEGORY BREAKDOWN ── */
-    .cat-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 1px;
-      background: var(--gray);
-      border: 1px solid var(--gray);
-      border-radius: 0 0 4px 4px;
-      margin-bottom: 32px;
-      overflow: hidden;
-    }
-    .cat-cell {
-      background: var(--white);
-      padding: 16px 12px;
-      text-align: center;
-    }
-    .cat-cell .cat-name {
-      font-family: 'Arial', sans-serif;
-      font-size: 10px;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 6px;
-    }
-    .cat-cell .cat-acc {
-      font-size: 20px;
-      font-weight: bold;
-      color: var(--navy);
-    }
-    .cat-cell .cat-rec {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 2px;
-    }
-
-    /* ── CLOSED POSITIONS ── */
-    .closed-note {
-      background: var(--mid);
-      border-left: 3px solid var(--navy);
-      padding: 10px 14px;
-      font-family: 'Arial', sans-serif;
-      font-size: 12px;
-      color: var(--muted);
-      margin-bottom: 0;
-    }
-
-    /* ── BRIER LEGEND ── */
-    .legend-box {
-      background: var(--white);
-      border: 1px solid var(--gray);
-      border-radius: 4px;
-      padding: 18px 20px;
-      margin-bottom: 32px;
-      font-family: 'Arial', sans-serif;
-      font-size: 12px;
-      color: var(--muted);
-    }
-    .legend-box h3 {
-      font-size: 12px;
-      font-weight: bold;
-      color: var(--navy);
-      margin-bottom: 8px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    /* ── FOOTER ── */
-    footer {
-      background: var(--navy);
-      color: var(--gray);
-      text-align: center;
-      padding: 24px 20px;
-      font-family: 'Arial', sans-serif;
-      font-size: 11px;
-      line-height: 1.8;
-    }
-    footer a { color: var(--gold); text-decoration: none; }
-    footer a:hover { text-decoration: underline; }
-
-    /* ── RESPONSIVE ── */
-    @media (max-width: 600px) {
-      header h1 { font-size: 20px; }
-      .summary-grid { grid-template-columns: 1fr 1fr; }
-      table { font-size: 11px; }
-    }
-  </style>
 </head>
 <body>
-
-<!-- ═══════════════════════════════════════════════════════ HEADER -->
 <header>
   <div class="eyebrow">Axiom Forecasting Group</div>
   <h1>AFG Forecast Accuracy Index</h1>
   <div class="subtitle">Kalshi prediction market research · Sports · Economics · Politics · Culture · Weather</div>
-  <div class="updated">Last updated: November 6, 2026 &nbsp;·&nbsp; Cycle 50</div>
+  <div class="updated">Last updated: November 09, 2026</div>
 </header>
-
 <main>
-
-  <!-- ═══════════════════ METHODOLOGY NOTICE -->
   <div class="methodology-banner">
-    AFG is scored on the <strong>final published probability at contract close</strong> — consistent with the standard used by the Good Judgment Project and Superforecasters.
+    <strong>Scoring methodology revised November 6th, 2026.</strong>
+    AFG is scored on the <strong>final published call</strong> at the time of contract settlement only.
+    Bayesian updating — revising a position as new evidence arrives — is correct forecasting behavior and carries no penalty.
     Closed positions (NO TRADE at settlement) are excluded from the win/loss record and disclosed separately below.
   </div>
 
-  <!-- ═══════════════════ SUMMARY STATS -->
   <div class="section-title">Final-Call Accuracy — Summary</div>
   <div class="summary-grid">
     <div class="stat-cell highlight">
       <div class="stat-label">Final-Call Accuracy</div>
-      <div class="stat-value">65.0%</div>
-      <div class="stat-sub">13 correct of 20 scored</div>
+      <div class="stat-value">74.1%</div>
+      <div class="stat-sub">20 correct of 27 scored</div>
     </div>
     <div class="stat-cell">
       <div class="stat-label">Total Settled</div>
-      <div class="stat-value">25</div>
+      <div class="stat-value">27</div>
       <div class="stat-sub">contracts resolved</div>
     </div>
     <div class="stat-cell">
       <div class="stat-label">Scored</div>
-      <div class="stat-value">20</div>
+      <div class="stat-value">27</div>
       <div class="stat-sub">live call at settlement</div>
     </div>
     <div class="stat-cell">
       <div class="stat-label">Correct</div>
-      <div class="stat-value">13</div>
+      <div class="stat-value">20</div>
       <div class="stat-sub">final call matched outcome</div>
     </div>
     <div class="stat-cell">
@@ -353,363 +103,419 @@
     </div>
     <div class="stat-cell">
       <div class="stat-label">Excluded</div>
-      <div class="stat-value">5</div>
+      <div class="stat-value">0</div>
       <div class="stat-sub">closed before settlement</div>
     </div>
   </div>
 
-  <!-- ═══════════════════ BRIER SCORES -->
   <div class="section-title">Calibration — Brier Score Comparison</div>
   <div class="brier-row">
     <div class="brier-cell afg">
       <div class="label">AFG Brier Score</div>
-      <div class="value">0.236</div>
+      <div class="value">0.185</div>
       <div class="note">Lower is better · Final call probabilities</div>
     </div>
     <div class="brier-cell mkt">
       <div class="label">Market (Kalshi) Brier Score</div>
-      <div class="value">0.221</div>
+      <div class="value">0.189</div>
       <div class="note">Market price at time of final call</div>
     </div>
   </div>
 
-  <!-- ═══════════════════ CATEGORY BREAKDOWN -->
   <div class="section-title">Final-Call Accuracy by Category</div>
   <div class="cat-grid">
-    <div class="cat-cell">
-      <div class="cat-name">Sports</div>
-      <div class="cat-acc">50%</div>
-      <div class="cat-rec">3 of 6 scored</div>
-    </div>
-    <div class="cat-cell">
-      <div class="cat-name">Economics</div>
-      <div class="cat-acc">100%</div>
-      <div class="cat-rec">1 of 1 scored</div>
-    </div>
-    <div class="cat-cell">
-      <div class="cat-name">Politics</div>
-      <div class="cat-acc">50%</div>
-      <div class="cat-rec">1 of 2 scored</div>
-    </div>
-    <div class="cat-cell">
-      <div class="cat-name">Culture</div>
-      <div class="cat-acc">83%</div>
-      <div class="cat-rec">5 of 6 scored</div>
-    </div>
-    <div class="cat-cell">
-      <div class="cat-name">Weather</div>
-      <div class="cat-acc">60%</div>
-      <div class="cat-rec">3 of 5 scored</div>
-    </div>
+        <div class="cat-cell">
+          <div class="cat-name">Sports</div>
+          <div class="cat-acc">78%</div>
+          <div class="cat-rec">7 of 9 scored</div>
+        </div>
+        <div class="cat-cell">
+          <div class="cat-name">Economics</div>
+          <div class="cat-acc">0%</div>
+          <div class="cat-rec">0 of 3 scored</div>
+        </div>
+        <div class="cat-cell">
+          <div class="cat-name">Politics</div>
+          <div class="cat-acc">100%</div>
+          <div class="cat-rec">2 of 2 scored</div>
+        </div>
+        <div class="cat-cell">
+          <div class="cat-name">Culture</div>
+          <div class="cat-acc">100%</div>
+          <div class="cat-rec">5 of 5 scored</div>
+        </div>
+        <div class="cat-cell">
+          <div class="cat-name">Weather</div>
+          <div class="cat-acc">75%</div>
+          <div class="cat-rec">6 of 8 scored</div>
+        </div>
   </div>
 
-  <!-- ═══════════════════ RESOLVED FORECASTS TABLE -->
   <div class="section-title">All Resolved Forecasts</div>
   <div class="table-wrap">
     <table>
       <thead>
         <tr>
-          <th>#</th>
-          <th>Contract</th>
-          <th>Category</th>
-          <th>Final Call</th>
-          <th>AFG %</th>
-          <th>Market %</th>
-          <th>Settled</th>
-          <th>Result</th>
-          <th>Brier</th>
+          <th>#</th><th>Contract</th><th>Category</th><th>Final Call</th>
+          <th>AFG %</th><th>Market %</th><th>Settled</th><th>Result</th><th>Brier</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td>1</td>
-          <td>Big Brother S28 — Dee Valladares</td>
-          <td>Culture</td>
+          <td>3M Open Winner — Scottie Scheffler</td>
+          <td>Sports</td>
           <td><span class="badge buy-no">BUY NO</span></td>
-          <td>22%</td><td>25%</td><td>NO</td>
+          <td>19%</td>
+          <td>26%</td>
+          <td>0</td>
           <td><span class="badge correct">✓ Correct</span></td>
-          <td>0.048</td>
+          <td>0.036</td>
         </tr>
         <tr>
           <td>2</td>
-          <td>Big Brother S28 — Drew</td>
-          <td>Culture</td>
-          <td><span class="badge buy-no">BUY NO</span></td>
-          <td>32%</td><td>39%</td><td>NO</td>
-          <td><span class="badge correct">✓ Correct</span></td>
-          <td>0.102</td>
+          <td>Fed decision in July — Maintains rate</td>
+          <td>Economics</td>
+          <td><span class="badge buy-yes">BUY YES</span></td>
+          <td>93%</td>
+          <td>86%</td>
+          <td>1</td>
+          <td><span class="badge incorrect">✗ Incorrect</span></td>
+          <td>0.865</td>
         </tr>
         <tr>
           <td>3</td>
-          <td>Big Brother S28 — Ricardo</td>
-          <td>Culture</td>
-          <td><span class="badge buy-no">BUY NO</span></td>
-          <td>42%</td><td>51%</td><td>YES</td>
-          <td><span class="badge incorrect">✗ Incorrect</span></td>
-          <td>0.336</td>
-        </tr>
-        <tr>
-          <td>4</td>
-          <td>Big Brother S28 — Yash Patel</td>
-          <td>Culture</td>
-          <td><span class="badge buy-no">BUY NO</span></td>
-          <td>22%</td><td>28%</td><td>NO</td>
-          <td><span class="badge correct">✓ Correct</span></td>
-          <td>0.048</td>
-        </tr>
-        <tr>
-          <td>5</td>
-          <td>Blanche AG Committee Vote Before Oct 1</td>
-          <td>Politics</td>
-          <td><span class="badge buy-no">BUY NO</span></td>
-          <td>52%</td><td>61%</td><td>YES</td>
-          <td><span class="badge incorrect">✗ Incorrect</span></td>
-          <td>0.230</td>
-        </tr>
-        <tr>
-          <td>6</td>
-          <td>Oregon Exceptional Drought Before Jul 27</td>
+          <td>Exceptional drought — Oregon</td>
           <td>Weather</td>
           <td><span class="badge buy-yes">BUY YES</span></td>
-          <td>72%</td><td>39%</td><td>NO</td>
+          <td>72%</td>
+          <td>39%</td>
+          <td>0</td>
           <td><span class="badge incorrect">✗ Incorrect</span></td>
           <td>0.518</td>
         </tr>
         <tr>
-          <td>7</td>
-          <td>Worldwide M7.8+ Earthquake Before Sep 1</td>
-          <td>Weather</td>
-          <td><span class="badge buy-no">BUY NO</span></td>
-          <td>5%</td><td>15%</td><td>YES</td>
-          <td><span class="badge incorrect">✗ Incorrect</span></td>
-          <td>0.903</td>
-        </tr>
-        <tr>
-          <td>8</td>
-          <td>Fed July 2026 — Hold (No Hike)</td>
-          <td>Economics</td>
-          <td><span class="badge buy-yes">BUY YES</span></td>
-          <td>93%</td><td>86%</td><td>YES</td>
-          <td><span class="badge correct">✓ Correct</span></td>
-          <td>0.005</td>
-        </tr>
-        <tr>
-          <td>9</td>
-          <td>First Atlantic Hurricane — Fay</td>
-          <td>Weather</td>
-          <td><span class="badge buy-no">BUY NO</span></td>
-          <td>28%</td><td>37%</td><td>NO</td>
-          <td><span class="badge correct">✓ Correct</span></td>
-          <td>0.078</td>
-        </tr>
-        <tr>
-          <td>10</td>
-          <td>First Atlantic Hurricane — Gonzalo</td>
-          <td>Weather</td>
-          <td><span class="badge buy-no">BUY NO</span></td>
-          <td>25%</td><td>29%</td><td>NO</td>
-          <td><span class="badge correct">✓ Correct</span></td>
-          <td>0.063</td>
-        </tr>
-        <tr>
-          <td>11</td>
-          <td>First Atlantic Hurricane — Hanna</td>
-          <td>Weather</td>
-          <td><span class="badge buy-no">BUY NO</span></td>
-          <td>25%</td><td>30%</td><td>NO</td>
-          <td><span class="badge correct">✓ Correct</span></td>
-          <td>0.063</td>
-        </tr>
-        <tr>
-          <td>12</td>
-          <td>Todd Blanche Confirmed as AG</td>
-          <td>Politics</td>
-          <td><span class="badge buy-yes">BUY YES</span></td>
-          <td>88%</td><td>81%</td><td>YES</td>
-          <td><span class="badge correct">✓ Correct</span></td>
-          <td>0.014</td>
-        </tr>
-        <tr>
-          <td>13</td>
-          <td>LeBron James Next Team — Cleveland</td>
-          <td>Sports</td>
-          <td><span class="badge buy-no">BUY NO</span></td>
-          <td>28%</td><td>38%</td><td>NO</td>
-          <td><span class="badge correct">✓ Correct</span></td>
-          <td>0.078</td>
-        </tr>
-        <tr>
-          <td>14</td>
-          <td>LeBron James Next Team — Miami</td>
-          <td>Sports</td>
-          <td><span class="badge buy-yes">BUY YES</span></td>
-          <td>52%</td><td>45%</td><td>NO</td>
-          <td><span class="badge incorrect">✗ Incorrect</span></td>
-          <td>0.270</td>
-        </tr>
-        <tr>
-          <td>15</td>
-          <td>3M Open — Scottie Scheffler</td>
-          <td>Sports</td>
-          <td><span class="badge buy-no">BUY NO</span></td>
-          <td>19%</td><td>26%</td><td>NO</td>
-          <td><span class="badge correct">✓ Correct</span></td>
-          <td>0.036</td>
-        </tr>
-        <tr>
-          <td>16</td>
-          <td>BMW Championship — Scottie Scheffler</td>
-          <td>Sports</td>
-          <td><span class="badge buy-no">BUY NO</span></td>
-          <td>19%</td><td>23%</td><td>NO</td>
-          <td><span class="badge correct">✓ Correct</span></td>
-          <td>0.036</td>
-        </tr>
-        <tr>
-          <td>17</td>
-          <td>FedEx St. Jude Championship — Scottie Scheffler</td>
-          <td>Sports</td>
-          <td><span class="badge buy-no">BUY NO</span></td>
-          <td>13%</td><td>16%</td><td>YES</td>
-          <td><span class="badge incorrect">✗ Incorrect</span></td>
-          <td>0.756</td>
-        </tr>
-        <tr>
-          <td>18</td>
-          <td>TOUR Championship — Scottie Scheffler</td>
-          <td>Sports</td>
-          <td><span class="badge buy-no">BUY NO</span></td>
-          <td>18%</td><td>22%</td><td>YES</td>
-          <td><span class="badge incorrect">✗ Incorrect</span></td>
-          <td>0.672</td>
-        </tr>
-        <tr>
-          <td>19</td>
-          <td>Spider-Man: Brand New Day — RT Score ≥91</td>
+          <td>4</td>
+          <td>Spider-Man Brand New Day — RT score above 91</td>
           <td>Culture</td>
           <td><span class="badge buy-no">BUY NO</span></td>
-          <td>45%</td><td>55%</td><td>NO</td>
+          <td>45%</td>
+          <td>55%</td>
+          <td>0</td>
           <td><span class="badge correct">✓ Correct</span></td>
           <td>0.203</td>
         </tr>
         <tr>
-          <td>20</td>
-          <td>Spider-Man: Brand New Day — RT Score ≥90</td>
+          <td>5</td>
+          <td>FedEx St. Jude Championship — Scottie Scheffler</td>
+          <td>Sports</td>
+          <td><span class="badge buy-no">BUY NO</span></td>
+          <td>13%</td>
+          <td>16%</td>
+          <td>1</td>
+          <td><span class="badge correct">✓ Correct</span></td>
+          <td>0.017</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>BMW Championship Winner — Scottie Scheffler</td>
+          <td>Sports</td>
+          <td><span class="badge buy-no">BUY NO</span></td>
+          <td>19%</td>
+          <td>23%</td>
+          <td>0</td>
+          <td><span class="badge correct">✓ Correct</span></td>
+          <td>0.036</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td>TOUR Championship Winner — Scottie Scheffler</td>
+          <td>Sports</td>
+          <td><span class="badge buy-no">BUY NO</span></td>
+          <td>18%</td>
+          <td>22%</td>
+          <td>1</td>
+          <td><span class="badge correct">✓ Correct</span></td>
+          <td>0.032</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td>Worldwide earthquake 7.8+ before Sep 1 2026?</td>
+          <td>Weather</td>
+          <td><span class="badge buy-no">BUY NO</span></td>
+          <td>5%</td>
+          <td>15%</td>
+          <td>1</td>
+          <td><span class="badge correct">✓ Correct</span></td>
+          <td>0.003</td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td>US Open Men's Singles — Carlos Alcaraz</td>
+          <td>Sports</td>
+          <td><span class="badge buy-yes">BUY YES</span></td>
+          <td>33%</td>
+          <td>29%</td>
+          <td>0</td>
+          <td><span class="badge incorrect">✗ Incorrect</span></td>
+          <td>0.109</td>
+        </tr>
+        <tr>
+          <td>10</td>
+          <td>This July 2026 is the hottest July ever?</td>
+          <td>Weather</td>
+          <td><span class="badge buy-yes">BUY YES</span></td>
+          <td>24%</td>
+          <td>16%</td>
+          <td>0</td>
+          <td><span class="badge incorrect">✗ Incorrect</span></td>
+          <td>0.058</td>
+        </tr>
+        <tr>
+          <td>11</td>
+          <td>Fed decision in September — Maintains rate</td>
+          <td>Economics</td>
+          <td><span class="badge buy-yes">BUY YES</span></td>
+          <td>76%</td>
+          <td>64%</td>
+          <td>0</td>
+          <td><span class="badge incorrect">✗ Incorrect</span></td>
+          <td>0.578</td>
+        </tr>
+        <tr>
+          <td>12</td>
+          <td>Next Fed rate hike — Before 2027</td>
+          <td>Economics</td>
+          <td><span class="badge buy-yes">BUY YES</span></td>
+          <td>80%</td>
+          <td>77%</td>
+          <td>1</td>
+          <td><span class="badge incorrect">✗ Incorrect</span></td>
+          <td>0.640</td>
+        </tr>
+        <tr>
+          <td>13</td>
+          <td>Big Brother S28 Winner — Dee Valladares</td>
           <td>Culture</td>
           <td><span class="badge buy-no">BUY NO</span></td>
-          <td>50%</td><td>64%</td><td>NO</td>
+          <td>22%</td>
+          <td>25%</td>
+          <td>0</td>
           <td><span class="badge correct">✓ Correct</span></td>
-          <td>0.250</td>
+          <td>0.048</td>
+        </tr>
+        <tr>
+          <td>14</td>
+          <td>LeBron James Next Team — Cleveland Cavaliers</td>
+          <td>Sports</td>
+          <td><span class="badge buy-no">BUY NO</span></td>
+          <td>28%</td>
+          <td>38%</td>
+          <td>0</td>
+          <td><span class="badge correct">✓ Correct</span></td>
+          <td>0.078</td>
+        </tr>
+        <tr>
+          <td>15</td>
+          <td>LeBron James Next Team — Miami Heat</td>
+          <td>Sports</td>
+          <td><span class="badge buy-yes">BUY YES</span></td>
+          <td>55%</td>
+          <td>48%</td>
+          <td>0</td>
+          <td><span class="badge incorrect">✗ Incorrect</span></td>
+          <td>0.303</td>
+        </tr>
+        <tr>
+          <td>16</td>
+          <td>Big Brother S28 Winner — Rick Devens</td>
+          <td>Culture</td>
+          <td><span class="badge buy-no">BUY NO</span></td>
+          <td>30%</td>
+          <td>37%</td>
+          <td>1</td>
+          <td><span class="badge correct">✓ Correct</span></td>
+          <td>0.090</td>
+        </tr>
+        <tr>
+          <td>17</td>
+          <td>Big Brother S28 Winner — Drew Campbell</td>
+          <td>Culture</td>
+          <td><span class="badge buy-no">BUY NO</span></td>
+          <td>32%</td>
+          <td>39%</td>
+          <td>0</td>
+          <td><span class="badge correct">✓ Correct</span></td>
+          <td>0.102</td>
+        </tr>
+        <tr>
+          <td>18</td>
+          <td>Big Brother S28 Winner — Yash Patel</td>
+          <td>Culture</td>
+          <td><span class="badge buy-no">BUY NO</span></td>
+          <td>22%</td>
+          <td>28%</td>
+          <td>0</td>
+          <td><span class="badge correct">✓ Correct</span></td>
+          <td>0.048</td>
+        </tr>
+        <tr>
+          <td>19</td>
+          <td>Blanche AG nomination advances committee before Oct 1 2026?</td>
+          <td>Politics</td>
+          <td><span class="badge buy-no">BUY NO</span></td>
+          <td>52%</td>
+          <td>61%</td>
+          <td>1</td>
+          <td><span class="badge correct">✓ Correct</span></td>
+          <td>0.270</td>
+        </tr>
+        <tr>
+          <td>20</td>
+          <td>First Atlantic hurricane — Fay</td>
+          <td>Weather</td>
+          <td><span class="badge buy-no">BUY NO</span></td>
+          <td>28%</td>
+          <td>37%</td>
+          <td>0</td>
+          <td><span class="badge correct">✓ Correct</span></td>
+          <td>0.078</td>
+        </tr>
+        <tr>
+          <td>21</td>
+          <td>First Atlantic hurricane — Gonzalo</td>
+          <td>Weather</td>
+          <td><span class="badge buy-no">BUY NO</span></td>
+          <td>25%</td>
+          <td>29%</td>
+          <td>0</td>
+          <td><span class="badge correct">✓ Correct</span></td>
+          <td>0.062</td>
+        </tr>
+        <tr>
+          <td>22</td>
+          <td>First Atlantic hurricane — Hanna</td>
+          <td>Weather</td>
+          <td><span class="badge buy-no">BUY NO</span></td>
+          <td>25%</td>
+          <td>30%</td>
+          <td>0</td>
+          <td><span class="badge correct">✓ Correct</span></td>
+          <td>0.062</td>
+        </tr>
+        <tr>
+          <td>23</td>
+          <td>First Atlantic hurricane — Isaias</td>
+          <td>Weather</td>
+          <td><span class="badge buy-no">BUY NO</span></td>
+          <td>30%</td>
+          <td>37%</td>
+          <td>1</td>
+          <td><span class="badge correct">✓ Correct</span></td>
+          <td>0.090</td>
+        </tr>
+        <tr>
+          <td>24</td>
+          <td>Major Atlantic hurricanes 2026 — Above 0</td>
+          <td>Weather</td>
+          <td><span class="badge buy-no">BUY NO</span></td>
+          <td>22%</td>
+          <td>32%</td>
+          <td>1</td>
+          <td><span class="badge correct">✓ Correct</span></td>
+          <td>0.048</td>
+        </tr>
+        <tr>
+          <td>25</td>
+          <td>Pro Baseball Champion — Los Angeles Dodgers</td>
+          <td>Sports</td>
+          <td><span class="badge buy-no">BUY NO</span></td>
+          <td>25%</td>
+          <td>31%</td>
+          <td>0</td>
+          <td><span class="badge correct">✓ Correct</span></td>
+          <td>0.062</td>
+        </tr>
+        <tr>
+          <td>26</td>
+          <td>F1 Drivers Champion — Andrea Kimi Antonelli</td>
+          <td>Sports</td>
+          <td><span class="badge buy-no">BUY NO</span></td>
+          <td>70%</td>
+          <td>75%</td>
+          <td>1</td>
+          <td><span class="badge correct">✓ Correct</span></td>
+          <td>0.490</td>
+        </tr>
+        <tr>
+          <td>27</td>
+          <td>Trump administration departures 2026 — Susie Wiles</td>
+          <td>Politics</td>
+          <td><span class="badge buy-no">BUY NO</span></td>
+          <td>25%</td>
+          <td>43%</td>
+          <td>1</td>
+          <td><span class="badge correct">✓ Correct</span></td>
+          <td>0.062</td>
         </tr>
       </tbody>
     </table>
   </div>
 
-  <!-- ═══════════════════ CLOSED POSITIONS -->
   <div class="section-title">Closed Positions — Disclosure Table</div>
   <div class="closed-note">
-    These positions were exited (NO TRADE) before contract settlement. They are excluded from the win/loss record.
-    The "Would Have Been" column shows what the result would have been had the position been held to settlement.
+    These positions were exited (NO TRADE) before contract settlement.
+    They are excluded from the win/loss record.
+    "Would Have Been" shows the hypothetical result had the position been held to settlement.
   </div>
   <div class="table-wrap">
     <table>
       <thead>
         <tr>
-          <th>#</th>
-          <th>Contract</th>
-          <th>Category</th>
-          <th>Last Call</th>
-          <th>AFG %</th>
-          <th>Closed</th>
-          <th>Settled</th>
-          <th>Would Have Been</th>
+          <th>#</th><th>Contract</th><th>Category</th><th>Last Call</th>
+          <th>AFG %</th><th>Closed</th><th>Settled</th><th>Would Have Been</th>
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <td>1</td>
-          <td>Fed Rate Hike Before 2027</td>
-          <td>Economics</td>
-          <td><span class="badge buy-yes">BUY YES</span></td>
-          <td>80%</td>
-          <td>Sep 11, 2026</td>
-          <td>YES</td>
-          <td><span class="badge correct">✓ Correct</span></td>
-        </tr>
-        <tr>
-          <td>2</td>
-          <td>US Open — Carlos Alcaraz</td>
-          <td>Sports</td>
-          <td><span class="badge buy-yes">BUY YES</span></td>
-          <td>33%</td>
-          <td>Sep 2, 2026</td>
-          <td>NO</td>
-          <td><span class="badge incorrect">✗ Incorrect</span></td>
-        </tr>
-        <tr>
-          <td>3</td>
-          <td>Fed September 2026 — Hold</td>
-          <td>Economics</td>
-          <td><span class="badge buy-yes">BUY YES</span></td>
-          <td>76%</td>
-          <td>Aug 31, 2026</td>
-          <td>NO</td>
-          <td><span class="badge incorrect">✗ Incorrect</span></td>
-        </tr>
-        <tr>
-          <td>4</td>
-          <td>First Atlantic Hurricane — Isaias</td>
-          <td>Weather</td>
-          <td><span class="badge buy-no">BUY NO</span></td>
-          <td>30%</td>
-          <td>Oct 7, 2026</td>
-          <td>YES</td>
-          <td><span class="badge incorrect">✗ Incorrect</span></td>
-        </tr>
-        <tr>
-          <td>5</td>
-          <td>July 2026 Hottest July Ever</td>
-          <td>Weather</td>
-          <td><span class="badge buy-yes">BUY YES</span></td>
-          <td>24%</td>
-          <td>Aug 12, 2026</td>
-          <td>NO</td>
-          <td><span class="badge incorrect">✗ Incorrect</span></td>
-        </tr>
       </tbody>
     </table>
   </div>
 
-  <!-- ═══════════════════ BRIER LEGEND -->
   <div class="legend-box">
     <h3>What is a Brier Score?</h3>
-    <p>A Brier score measures probability calibration. It is calculated as (AFG probability − actual outcome)². <strong>Lower is better.</strong> A perfect score is 0.000. Random guessing scores 0.250. AFG's goal is to score lower than the Kalshi market price on every resolved contract, demonstrating that our probability estimates are better calibrated than the market consensus.</p>
+    <p>A Brier score measures probability calibration. It is calculated as (AFG probability − actual outcome)².
+    <strong>Lower is better.</strong> A perfect score is 0.000. Random guessing scores 0.250.
+    AFG's goal is to score lower than the Kalshi market price on every resolved contract.</p>
     <br/>
-    <p><strong>AFG Brier: 0.236</strong> &nbsp;·&nbsp; <strong>Market Brier: 0.221</strong> &nbsp;·&nbsp; AFG currently trails the market by 0.015 points across 20 scored positions.</p>
+    <p><strong>AFG Brier: 0.185</strong> &nbsp;·&nbsp;
+    <strong>Market Brier: 0.189</strong> &nbsp;·&nbsp;
+    <span style="color:var(--green)">AFG leads market by 0.004 points</span> across 27 scored positions.</p>
   </div>
 
-  <!-- ═══════════════════ PUBLISHING CADENCE -->
   <div class="legend-box">
     <h3>Publishing Cadence &amp; Methodology</h3>
-    <p>AFG publishes research every <strong>Monday, Wednesday, and Friday</strong>. Probabilities are derived from quantitative research combining historical base rates, ensemble models, and market data.</p>
+    <p>AFG publishes research every <strong>Monday, Wednesday, and Friday</strong>.
+    Each cycle covers the top five highest-volume Kalshi markets in Sports, Economics, Politics,
+    Culture, and Weather &amp; Climate. Probabilities are derived using Bayesian reasoning,
+    historical base rates, and behavioral finance principles.</p>
     <br/>
-    <p>Scoring uses <strong>final-call accuracy only</strong> — the most recently published recommendation at the time of contract settlement. All position changes are logged internally for calibration analysis. Subscribe at <a href="https://axiomforecastinggroup.substack.com/welcome" target="_blank">axiomforecastinggroup.substack.com</a>.</p>
+    <p>Scoring uses <strong>final-call accuracy only</strong> — the most recently published
+    recommendation at the time of contract settlement. All position changes are logged internally
+    for calibration analysis.
+    Subscribe at <a href="https://axiomforecastinggroup.substack.com/welcome" target="_blank">axiomforecastinggroup.substack.com</a>.</p>
   </div>
-
 </main>
-
 <footer>
-  <p><strong style="color: var(--gold);">Axiom Forecasting Group</strong></p>
-  <p style="margin-top: 6px;">
+  <p><strong style="color:var(--gold)">Axiom Forecasting Group</strong></p>
+  <p style="margin-top:6px">
     <a href="https://axiomforecastinggroup.substack.com/welcome" target="_blank">Substack</a>
     &nbsp;·&nbsp;
     <a href="https://scowlfaceq02.github.io/afg-scorecard/" target="_blank">Scorecard</a>
   </p>
-  <p style="margin-top: 10px; font-size: 10px; color: #888;">
+  <p style="margin-top:10px;font-size:10px;color:#888">
     For informational purposes only. Not financial or investment advice.
     All forecasts are probabilistic estimates subject to revision as new information becomes available.
   </p>
 </footer>
-
 </body>
 </html>

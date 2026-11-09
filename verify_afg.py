@@ -167,17 +167,21 @@ except Exception as e:
 print("\nCHECK 5: No premature resolutions (future settlement date)")
 try:
     cur.execute("""
-        SELECT ticker, close_date, outcome
+        SELECT ticker, close_date, resolution_date, outcome
         FROM predictions
         WHERE (outcome IS NOT NULL AND outcome != '')
         AND status NOT IN ('Void', 'Superseded')
     """)
     rows      = cur.fetchall()
     premature = []
-    for ticker, close_date_raw, outcome in rows:
+    for ticker, close_date_raw, resolution_date_raw, outcome in rows:
         d = _parse_date(close_date_raw)
         if d and d > TODAY:
-            premature.append(f"{ticker} (settles {d})")
+            # Allow early resolution if resolution_date is set and in the past
+            # (contract settled early — e.g. official departed before contract close date)
+            r = _parse_date(resolution_date_raw)
+            if r is None or r > TODAY:
+                premature.append(f"{ticker} (settles {d})")
     check(
         "No premature resolutions",
         len(premature) == 0,

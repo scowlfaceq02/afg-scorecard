@@ -78,7 +78,7 @@ def fetch_scored_positions(conn):
     for ticker in resolved_tickers:
         # Get settlement info
         cur.execute("""
-            SELECT outcome, close_date, market, category
+            SELECT outcome, close_date, market, category, resolution_date
             FROM predictions
             WHERE ticker = ? AND outcome IS NOT NULL AND outcome != ''
             AND status NOT IN ('Void', 'Superseded')
@@ -87,7 +87,7 @@ def fetch_scored_positions(conn):
         row = cur.fetchone()
         if not row:
             continue
-        outcome, close_date_raw, market, category = row
+        outcome, close_date_raw, market, category, resolution_date_raw = row
         settle_date = _parse_date(close_date_raw)
 
         # Get ALL published calls for this ticker, in date order
@@ -133,17 +133,18 @@ def fetch_scored_positions(conn):
         brier = round((p - o) ** 2, 3)
 
         entry = {
-            "ticker":       ticker,
-            "market":       market or ticker,
-            "category":     category or "—",
-            "final_call":   final_rec,
-            "afg_pct":      round(afg_pct, 1),
-            "kalshi_pct":   round(kalshi_pct, 1),
-            "published_date": pub_date,
-            "settle_date":  close_date_raw,
-            "outcome":      str(outcome).upper(),
-            "brier":        brier,
-            "closed":       is_closed,
+            "ticker":          ticker,
+            "market":          market or ticker,
+            "category":        category or "—",
+            "final_call":      final_rec,
+            "afg_pct":         round(afg_pct, 1),
+            "kalshi_pct":      round(kalshi_pct, 1),
+            "published_date":  pub_date,
+            "settle_date":     close_date_raw,
+            "resolution_date": resolution_date_raw,
+            "outcome":         str(outcome).upper(),
+            "brier":           brier,
+            "closed":          is_closed,
         }
 
         if is_closed:
@@ -662,13 +663,17 @@ def main():
     print(f"Excluded (closed): {len(closed)}")
 
     # Premature resolution guard
+    # Allow early resolution when resolution_date is set and in the past
+    # (contract settled before its official close date — e.g. official departed early)
     today_date = date.today()
     for r in scored:
         settle = _parse_date(r.get("settle_date"))
         if settle and settle > today_date:
-            print(f"\nSTOP: {r['ticker']} shows as Resolved but close date {settle} is in the future.")
-            print("Run the premature-resolution fix before proceeding.")
-            sys.exit(1)
+            res_date = _parse_date(r.get("resolution_date"))
+            if res_date is None or res_date > today_date:
+                print(f"\nSTOP: {r['ticker']} shows as Resolved but close date {settle} is in the future.")
+                print("Run the premature-resolution fix before proceeding.")
+                sys.exit(1)
 
     # Build HTML
     html = build_html(scored, closed, stats, today_str)

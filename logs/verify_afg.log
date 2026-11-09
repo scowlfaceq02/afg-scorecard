@@ -1,0 +1,108 @@
+
+2026-11-09 — 1/9 passed [FAILED]
+  ✓ PASS  Database accessible with required tables
+         Tables found: predictions, sqlite_sequence
+  ✗ FAIL  All required columns present
+         Missing: {'ticker', 'close_date', 'published_date'}
+  ✗ FAIL  No open positions missing ticker or category
+         no such column: ticker
+  ✗ FAIL  All probabilities in valid range
+         no such column: ticker
+  ✗ FAIL  No premature resolutions
+         no such column: ticker
+  ✗ FAIL  No same-date BUY YES + BUY NO conflicts per ticker
+         no such column: ticker
+  ✗ FAIL  All resolved contracts have a final scorable call
+         no such column: ticker
+  ✗ FAIL  No future-dated published calls
+         no such column: ticker
+  ✗ FAIL  No open calls at hard 0% or 100% AFG probability
+         no such column: ticker
+
+2026-11-09 — 8/9 passed, 1 warnings [FAILED]
+  ✓ PASS  Database accessible with required tables
+         Tables found: predictions, sqlite_sequence
+  ✓ PASS  All required columns present
+         25 columns verified
+  ✓ PASS  No open positions missing ticker or category
+         All open positions have ticker and category
+  ✓ PASS  All probabilities in valid range
+         112 probability pairs verified
+  ✗ FAIL  No premature resolutions
+         Future-dated resolutions: ['KXNEXTAG-29-TBLA (settles 2029-01-20)', 'KXRT-SPI-90 (settles 2026-12-31)', 'KXNEXTAG-29-TBLA (settles 2029-01-20)']
+  ✓ PASS  No same-date BUY YES + BUY NO conflicts per ticker
+         No contradictory same-day calls found
+  ✓ PASS  All resolved contracts have a final scorable call
+         28 resolved contracts, 6 with Bayesian updates (expected)
+  ⚠ WARN  Bayesian updates noted (not a problem)
+         6 tickers updated mid-cycle: FEDHIKE-26DEC31, KXBIGBROTHER-26DEC31-DEE, KXBIGBROTHER-26DEC31-YAS, KXDROUGHTLEVEL-26JULLD4-OR, KXMLB-26-LAD, KXNEXTAG-29-TBLA
+  ✓ PASS  No future-dated published calls
+         112 publication dates validated
+  ✓ PASS  No open calls at hard 0% or 100% AFG probability
+         75 open call probabilities checked
+
+2026-11-09 — 9/9 passed, 1 warnings
+  ✓ PASS  Database accessible with required tables
+         Tables found: predictions, sqlite_sequence
+  ✓ PASS  All required columns present
+         25 columns verified
+  ✓ PASS  No open positions missing ticker or category
+         All open positions have ticker and category
+  ✓ PASS  All probabilities in valid range
+         112 probability pairs verified
+  ✓ PASS  No premature resolutions
+         34 resolved contracts validated
+  ✓ PASS  No same-date BUY YES + BUY NO conflicts per ticker
+         No contradictory same-day calls found
+  ✓ PASS  All resolved contracts have a final scorable call
+         26 resolved contracts, 5 with Bayesian updates (expected)
+  ⚠ WARN  Bayesian updates noted (not a problem)
+         5 tickers updated mid-cycle: FEDHIKE-26DEC31, KXBIGBROTHER-26DEC31-DEE, KXBIGBROTHER-26DEC31-YAS, KXDROUGHTLEVEL-26JULLD4-OR, KXMLB-26-LAD
+  ✓ PASS  No future-dated published calls
+         112 publication dates validated
+  ✓ PASS  No open calls at hard 0% or 100% AFG probability
+         78 open call probabilities checked
+
+2026-11-09 — 6/9 passed, 1 warnings [FAILED]
+  ✓ PASS  Database accessible with required tables
+         Tables found: predictions, sqlite_sequence
+  ✓ PASS  All required columns present
+         25 columns verified
+  ✗ FAIL  No open positions missing ticker or category
+         6 rows missing ticker/category — fix before publishing
+  ✓ PASS  All probabilities in valid range
+         118 probability pairs verified
+  ✗ FAIL  No premature resolutions
+         Future-dated resolutions: ['KXTRUMPADMINLEAVE-26DEC31-SWIL (settles 2027-01-01)']
+  ✗ FAIL  No same-date BUY YES + BUY NO conflicts per ticker
+         Conflicts: ['None on None: both BUY YES and BUY NO published same day']
+  ✓ PASS  All resolved contracts have a final scorable call
+         27 resolved contracts, 5 with Bayesian updates (expected)
+  ⚠ WARN  Bayesian updates noted (not a problem)
+         5 tickers updated mid-cycle: FEDHIKE-26DEC31, KXBIGBROTHER-26DEC31-DEE, KXBIGBROTHER-26DEC31-YAS, KXDROUGHTLEVEL-26JULLD4-OR, KXMLB-26-LAD
+  ✓ PASS  No future-dated published calls
+         118 publication dates validated
+  ✓ PASS  No open calls at hard 0% or 100% AFG probability
+         83 open call probabilities checked
+
+2026-11-09 — 9/9 passed, 1 warnings
+  ✓ PASS  Database accessible with required tables
+         Tables found: predictions, sqlite_sequence
+  ✓ PASS  All required columns present
+         25 columns verified
+  ✓ PASS  No open positions missing ticker or category
+         All open positions have ticker and category
+  ✓ PASS  All probabilities in valid range
+         118 probability pairs verified
+  ✓ PASS  No premature resolutions
+         35 resolved contracts validated
+  ✓ PASS  No same-date BUY YES + BUY NO conflicts per ticker
+         No contradictory same-day calls found
+  ✓ PASS  All resolved contracts have a final scorable call
+         27 resolved contracts, 5 with Bayesian updates (expected)
+  ⚠ WARN  Bayesian updates noted (not a problem)
+         5 tickers updated mid-cycle: FEDHIKE-26DEC31, KXBIGBROTHER-26DEC31-DEE, KXBIGBROTHER-26DEC31-YAS, KXDROUGHTLEVEL-26JULLD4-OR, KXMLB-26-LAD
+  ✓ PASS  No future-dated published calls
+         118 publication dates validated
+  ✓ PASS  No open calls at hard 0% or 100% AFG probability
+         83 open call probabilities checked
