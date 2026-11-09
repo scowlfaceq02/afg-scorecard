@@ -128,7 +128,9 @@ def fetch_scored_positions(conn):
         is_closed = (final_rec == "NO TRADE")
 
         # Brier score (on AFG probability at final call)
-        o = 1 if str(outcome).upper() == "YES" else 0
+        # outcome stored as integer 0/1 — also accept legacy "YES"/"NO" strings
+        _out_str = str(outcome).strip().upper()
+        o = 1 if (_out_str == "1" or _out_str == "YES") else 0
         p = afg_pct / 100.0
         brier = round((p - o) ** 2, 3)
 
