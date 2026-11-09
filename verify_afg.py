@@ -1,8 +1,18 @@
 """
 verify_afg.py  —  AFG Pre-Publication Integrity Checker
-9 checks before every Monday / Wednesday / Friday cycle
+12 checks before every Monday / Wednesday / Friday cycle
 
 CHANGE LOG:
+  November 9th, 2026 — Added checks 10, 11, 12 following full audit
+  that found 74.1% reported accuracy was actually 59.3% due to:
+    (a) outcome stored as 0/1 integer but parsed as YES/NO string
+        → silent wrong scoring on every position (Check 10)
+    (b) duplicate resolved rows inflating denominator (Check 11)
+    (c) no independent cross-check before publish (Check 12)
+  Check 12 now prints the verified accuracy number every cycle.
+  Any discrepancy between Check 12 and 06_build_scorecard.py output
+  MUST be resolved before publishing — the two numbers must match.
+
   November 6th, 2026 — Removed "first-call-only deduplication" check.
   Replaced with "final-call scoring compliance" check.
   Bayesian position updates (changing BUY NO → BUY YES) are correct
@@ -13,7 +23,7 @@ USAGE:
   python3 verify_afg.py
 
 EXIT CODES:
-  0 = all 9 checks passed — safe to run the cycle
+  0 = all 12 checks passed — safe to run the cycle
   1 = one or more checks failed — fix before publishing
 """
 
@@ -354,6 +364,148 @@ except Exception as e:
     check("No open calls at hard 0% or 100% AFG probability", False, str(e))
 
 
+# ── CHECK 10: OUTCOME FORMAT (must be 0/1 integer, not YES/NO string) ────────
+print("\nCHECK 10: Resolved outcomes stored as 0/1 (not YES/NO strings)")
+try:
+    cur.execute("""
+        SELECT ticker, outcome
+        FROM predictions
+        WHERE outcome IS NOT NULL AND outcome != ''
+        AND status NOT IN ('Void', 'Superseded')
+    """)
+    rows = cur.fetchall()
+    bad_format = []
+    for ticker, outcome in rows:
+        s = str(outcome).strip().upper()
+        if s not in ("0", "1"):
+            bad_format.append(f"{ticker} (outcome={outcome!r})")
+    check(
+        "All resolved outcomes stored as 0 or 1",
+        len(bad_format) == 0,
+        f"Non-integer outcomes found: {bad_format[:10]}" if bad_format
+        else f"{len(rows)} resolved outcomes validated as 0/1"
+    )
+except Exception as e:
+    check("All resolved outcomes stored as 0 or 1", False, str(e))
+
+
+# ── CHECK 11: NO DUPLICATE ACTIVE RESOLVED ROWS PER TICKER ───────────────────
+print("\nCHECK 11: No duplicate active resolved rows per ticker")
+try:
+    cur.execute("""
+        SELECT ticker, COUNT(*) as n
+        FROM predictions
+        WHERE outcome IS NOT NULL AND outcome != ''
+        AND status NOT IN ('Void', 'Superseded')
+        AND recommendation IN ('BUY YES', 'BUY NO')
+        GROUP BY ticker
+        HAVING n > 1
+    """)
+    dups = cur.fetchall()
+    # Allow Bayesian updates (BUY NO → BUY YES on same ticker) only when
+    # the calls have DIFFERENT published_dates. Flag same-date duplicates.
+    real_dups = []
+    for ticker, n in dups:
+        cur.execute("""
+            SELECT id, recommendation, afg_probability, published_date, outcome
+            FROM predictions
+            WHERE ticker = ?
+            AND outcome IS NOT NULL AND outcome != ''
+            AND status NOT IN ('Void', 'Superseded')
+            AND recommendation IN ('BUY YES', 'BUY NO')
+            ORDER BY id
+        """, (ticker,))
+        sub = cur.fetchall()
+        # Check for identical recommendation+date combos (true duplicates)
+        seen = {}
+        for row_id, rec, afg_p, pub_date, outcome in sub:
+            key = (rec, pub_date)
+            if key in seen:
+                real_dups.append(
+                    f"{ticker}: id={seen[key]} and id={row_id} both have "
+                    f"{rec} on {pub_date}"
+                )
+            else:
+                seen[key] = row_id
+    if real_dups:
+        check(
+            "No true duplicate resolved rows per ticker",
+            False,
+            f"Duplicates found: {real_dups[:5]}"
+        )
+    else:
+        multi_note = (
+            f"{len(dups)} tickers with Bayesian updates (legitimate) — "
+            "no same-rec/same-date duplicates found"
+        ) if dups else f"No duplicate resolved rows found"
+        check("No true duplicate resolved rows per ticker", True, multi_note)
+except Exception as e:
+    check("No true duplicate resolved rows per ticker", False, str(e))
+
+
+# ── CHECK 12: SCORECARD SPOT-CHECK (independent scoring vs build script) ─────
+print("\nCHECK 12: Independent scoring spot-check")
+try:
+    cur.execute("""
+        SELECT DISTINCT ticker
+        FROM predictions
+        WHERE outcome IS NOT NULL AND outcome != ''
+        AND status NOT IN ('Void', 'Superseded')
+        AND recommendation IN ('BUY YES', 'BUY NO')
+    """)
+    tickers = [r[0] for r in cur.fetchall()]
+
+    correct = 0
+    incorrect = 0
+    scoring_errors = []
+
+    for ticker in tickers:
+        # Final call = last BUY YES/BUY NO row by id
+        cur.execute("""
+            SELECT id, recommendation, afg_probability, outcome
+            FROM predictions
+            WHERE ticker = ?
+            AND outcome IS NOT NULL AND outcome != ''
+            AND status NOT IN ('Void', 'Superseded')
+            AND recommendation IN ('BUY YES', 'BUY NO')
+            ORDER BY id DESC LIMIT 1
+        """, (ticker,))
+        row = cur.fetchone()
+        if not row:
+            continue
+        row_id, rec, afg_p, outcome_raw = row
+        try:
+            o = int(str(outcome_raw).strip())
+            assert o in (0, 1)
+        except (ValueError, AssertionError):
+            scoring_errors.append(f"{ticker}: non-integer outcome={outcome_raw!r}")
+            continue
+
+        if (rec == "BUY YES" and o == 1) or (rec == "BUY NO" and o == 0):
+            correct += 1
+        else:
+            incorrect += 1
+
+    n = correct + incorrect
+    acc = correct / n * 100 if n else 0
+
+    detail = (
+        f"{n} positions scored independently — "
+        f"{correct} Correct / {incorrect} Incorrect / {acc:.1f}% accuracy"
+    )
+    if scoring_errors:
+        detail += f" | ERRORS: {scoring_errors[:5]}"
+    check(
+        "Independent scoring completed without errors",
+        len(scoring_errors) == 0,
+        detail
+    )
+    # Always surface the accuracy number regardless of pass/fail
+    print(f"         ► Verified accuracy: {correct}/{n} = {acc:.1f}%")
+except Exception as e:
+    check("Independent scoring completed without errors", False, str(e))
+
+
 # ── SUMMARY ───────────────────────────────────────────────────────────────────
 conn.close()
 
@@ -363,7 +515,7 @@ warned  = sum(1 for r in results if r[0] == WARN)
 total   = passed + failed
 
 print(f"\n{'='*62}")
-print(f"RESULTS: {passed}/{total} checks passed", end="")
+print(f"RESULTS: {passed}/{total} checks passed (12-check suite)", end="")
 if warned:
     print(f"  |  {warned} warning(s)", end="")
 print()
