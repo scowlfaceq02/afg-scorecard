@@ -1,0 +1,351 @@
+
+==================================================================
+STEP 1: Pre-flight checks
+==================================================================
+Folder: C:\Users\qwhit\AFG    Date: Wednesday, November 11, 2026
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+STOPPED: data/raw_markets.xlsx was last saved 2026-07-20, not today
+FIX:     the new download did not replace it. Save today's file from Claude into data\ and replace the old one.
+Nothing has been pushed or published.
+Full log: logs\run_cycle_2026-11-11.log  (send this file to Claude if you need help)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+==================================================================
+STEP 1: Pre-flight checks
+==================================================================
+Folder: C:\Users\qwhit\AFG    Date: Wednesday, November 11, 2026
+OK: scripts current; three input files saved today; 33 calls dated 2026-11-11.
+
+==================================================================
+STEP 2: verify_afg.py (before any change)
+==================================================================
+  
+  ==============================================================
+  AFG PRE-PUBLICATION INTEGRITY CHECK — 2026-11-11
+  ==============================================================
+  
+  CHECK 1: Database connectivity and schema
+    ✓ PASS  Database accessible with required tables
+           → Tables found: predictions, sqlite_sequence
+  
+  CHECK 2: Required columns in predictions table
+    ✓ PASS  All required columns present
+           → 25 columns verified
+  
+  CHECK 3: Open positions have ticker and category
+    ✓ PASS  No open positions missing ticker or category
+           → All open positions have ticker and category
+  
+  CHECK 4: AFG and Kalshi probabilities in valid range
+    ✓ PASS  All probabilities in valid range
+           → 118 probability pairs verified
+  
+  CHECK 5: No premature resolutions (future settlement date)
+    ✓ PASS  No premature resolutions
+           → 28 resolved contracts validated
+  
+  CHECK 6: No contradictory simultaneous BUY YES + BUY NO on same ticker
+    ✓ PASS  No same-date BUY YES + BUY NO conflicts per ticker
+           → No contradictory same-day calls found
+  
+  CHECK 7: Final-call scoring compliance
+    ✓ PASS  All resolved contracts have a final scorable call
+           → 27 resolved contracts, 1 with Bayesian updates (expected)
+    ⚠ WARN  Bayesian updates noted (not a problem)
+           → 1 tickers updated mid-cycle: KXDROUGHTLEVEL-26JULLD4-OR
+  
+  CHECK 8: Publication dates not in future
+    ✓ PASS  No future-dated published calls
+           → 118 publication dates validated
+  
+  CHECK 9: AFG probability not at hard extremes (0% or 100%) on live calls
+    ✓ PASS  No open calls at hard 0% or 100% AFG probability
+           → 90 open call probabilities checked
+  
+  CHECK 10: Resolved outcomes stored as 0/1 (not YES/NO strings)
+    ✓ PASS  All resolved outcomes stored as 0 or 1
+           → 28 resolved outcomes validated as 0/1
+  
+  CHECK 11: No duplicate active resolved rows per ticker
+    ✓ PASS  No true duplicate resolved rows per ticker
+           → 1 tickers with Bayesian updates (legitimate) — no same-rec/same-date duplicates found
+  
+  CHECK 12: Independent scoring spot-check
+    ✓ PASS  Independent scoring completed without errors
+           → 27 positions scored independently — 13 Correct / 14 Incorrect / 48.1% accuracy
+           ► Verified accuracy: 13/27 = 48.1%
+  
+  CHECK 13: Stored outcomes match Kalshi's settlement record
+    ✓ PASS  Every resolved outcome matches Kalshi (or a documented early resolution)
+           → 27 resolved tickers matched against Kalshi
+  
+  ==============================================================
+  RESULTS: 13/13 checks passed (13-check suite)  |  1 warning(s)
+  ==============================================================
+  
+  ✅ All checks passed. Safe to run the cycle.
+  
+
+==================================================================
+STEP 3: 04_build_report.py
+==================================================================
+  Wrote reports/AFG_Research_Report_2026-11-11.docx
+  Wrote data/final_report.xlsx
+  Wrote reports/AFG_Substack_Post_2026-11-11.md
+  Wrote reports/AFG_Twitter_Post_2026-11-11.txt
+  Wrote reports/AFG_Substack_Note_2026-11-11.txt
+
+==================================================================
+STEP 4: 045_log_predictions.py
+==================================================================
+  2026-11-11: no changes (all calls already recorded).
+
+==================================================================
+STEP 5: Fill ticker on newly logged rows
+==================================================================
+  ticker filled on 0 row(s)
+
+==================================================================
+STEP 6: 05_update_scorecard.py
+==================================================================
+  [2026-11-11] Checking ALL 87 open predictions against Kalshi...
+    Still open: 2027 Pro Football Champion — Los Angeles Rams (KXSB-27-LAR)
+    Still open: 2027 Pro Basketball Champion — Oklahoma City Thunder (KXNBA-27-OKC)
+    Still open: Will the Citrini scenario happen? (KXCITRINI-28JUL01)
+    Still open: Number of rate cuts in 2026 — Exactly 0 (KXRATECUTCOUNT-26DEC31-T0)
+    Still open: Hormuz traffic normal before Jan 1 2027? (KXHORMUZNORM-26MAR17-B270101)
+    Still open: U.S. confirms aliens exist before Jan 20 2029? (KXALIENS-27-29)
+    Still open: US-Iran nuclear deal before Jan 1 2028? (KXUSAIRANAGREEMENT-27-28)
+    Still open: Will the SAVE Act become law? (KXSAVEACT-27-JAN04)
+    Still open: GTA VI release before 2027? (GTA6-26DEC31)
+    Still open: Oscar Best Picture — The Odyssey (KXOSCARPIC-27-ODY)
+    Still open: Game Awards 2026 GOTY — Grand Theft Auto VI (KXGAMEAWARDS-2026-GTA)
+    Still open: Next James Bond — Callum Turner (KXBOND-30-CAL)
+    Still open: CA 8.0+ earthquake before 2027? (KXEARTHQUAKECALIFORNIA-27)
+    Still open: Hormuz traffic normal before Jul 1 2027? (KXHORMUZNORM-26MAR17-B270701)
+    Still open: Hormuz traffic normal before Apr 1 2027? (KXHORMUZNORM-26MAR17-B270401)
+    Still open: 2027 NBA Champion — San Antonio Spurs (KXNBA-27-SAS)
+    Still open: Will 2026 be the hottest year ever? (KXGTEMP-26-P0)
+    Still open: Crypto market structure law before Jan 1 2028? (KXCRYPTOSTRUCTURE-27JAN-28)
+    Still open: Recession this year? (KXRECSSNBER-26)
+    Still open: Hormuz traffic normal before Dec 1 2026? (KXHORMUZNORM-26MAR17-B261201)
+    Still open: Leaders leaving office 2026 — Benjamin Netanyahu (KXLEADERSOUT-27JAN01-BNETISR)
+    Still open: Leaders leaving office 2026 — Christopher Luxon (KXLEADERSOUT-27JAN01-PLUXPMNZ)
+    Still open: Next James Bond — Jack Lowden (KXBOND-30-JAC)
+    Still open: Major Atlantic hurricanes 2026 — Above 1 (KXHURCTOTMAJ-26DEC01-T1)
+    Still open: 2027 NFL Champion — LA Rams (KXSB-27-LAR)
+    Still open: US-Iran nuclear deal before Jan 20 2029? (KXUSAIRANAGREEMENT-27-29JAN20)
+    Still open: Oscar Best Picture — The Odyssey (KXOSCARPIC-27-ODY)
+    Still open: 2027 NFL Champion — LA Rams (KXSB-27-LAR)
+    Still open: Oscar Best Picture — The Odyssey (KXOSCARPIC-27-ODY)
+    Still open: 2027 NFL Champion — LA Rams (KXSB-27-LAR)
+    Still open: US-Iran nuclear deal before Jan 20 2029? (KXUSAIRANAGREEMENT-27-29JAN20)
+    Still open: Next James Bond — Jack Barton (KXBOND-30-JACK)
+    Still open: US-Iran nuclear deal before Jan 20 2029? (KXUSAIRANAGREEMENT-27-29JAN20)
+    Still open: CA 8.0+ earthquake before 2027? (KXEARTHQUAKECALIFORNIA-27)
+    Still open: Hormuz traffic normal before Jan 1 2028? (KXHORMUZNORM-26MAR17-B280101)
+    Still open: College Football Champion — Texas (KXNCAAF-27-TEX)
+    Still open: Heisman Trophy Winner — Darian Mensah (KXHEISMAN-27-DMENS)
+    Still open: US-Iran nuclear deal before Jan 20 2029? (KXUSAIRANAGREEMENT-27-29JAN20)
+    Still open: College Football Champion — Texas (KXNCAAF-27-TEX)
+    Still open: 2027 NBA Champion — OKC Thunder (KXNBA-27-OKC)
+    Still open: Heisman Trophy Winner — Trinidad Chambliss (KXHEISMAN-27-TCHAM)
+    Still open: US-Iran nuclear deal before Jan 20 2029? (KXUSAIRANAGREEMENT-27-29JAN20)
+    Still open: Hormuz traffic normal before Jul 1 2027? (KXHORMUZNORM-26MAR17-B270701)
+    Still open: Dancing with the Stars S35 Winner — Ezra Frech (KXDANCINGWITHTHESTARS-26DEC31-EFRE)
+    Still open: Will 2026 be the hottest year ever? (KXGTEMP-26-P0)
+    Still open: Hurricane landfall in Hawaii in 2026? (KXHURPATHHAWAII-26DEC)
+    Still open: NBA Champion — OKC Thunder (KXNBA-27-OKC)
+    Still open: Heisman Trophy Winner — Jeremiah Smith (KXHEISMAN-27-JSMIT)
+    Still open: Oscar Best Picture — The Odyssey (KXOSCARPIC-27-ODY)
+    Still open: College Football Champion — Georgia (KXNCAAF-27-UGA)
+    Still open: CA 8.0+ earthquake before 2027? (KXEARTHQUAKECALIFORNIA-27)
+    Still open: CA 8.0+ earthquake before 2027? (KXEARTHQUAKECALIFORNIA-27)
+    Still open: US-Iran nuclear deal before Jan 20 2029? (KXUSAIRANAGREEMENT-27-29JAN20)
+    Still open: 2027 NFL Champion — San Francisco 49ers (KXSB-27-SF)
+    Still open: NFL MVP — Brock Purdy (KXNFLMVP-27-BPUR)
+    Still open: Clarity Act becomes law before Jan 1 2028? (KXCRYPTOSTRUCTURE-27JAN-28)
+    Still open: Next James Bond — Callum Turner (KXBOND-30-CAL)
+    Still open: Will 2026 be the hottest year on record? (NASA GISS) (KXGTEMP-26-P0)
+    Still open: Game Awards 2026 GOTY — Grand Theft Auto VI (KXGAMEAWARDS-2026-GTA)
+    Still open: 2027 NFL Champion — San Francisco 49ers (KXSB-27-SF)
+    Still open: NFL MVP — Brock Purdy (KXNFLMVP-27-BPUR)
+    Still open: Clarity Act becomes law before Jan 1 2028? (KXCRYPTOSTRUCTURE-27JAN-28)
+    Still open: CA 8.0+ earthquake before 2027? (KXEARTHQUAKECALIFORNIA-27)
+    Still open: Next James Bond — Jack Lowden (KXBOND-30-JAC)
+    Still open: Oscar Best Picture — The Odyssey (KXOSCARPIC-27-ODY)
+    Still open: NFL MVP — Joe Burrow (KXNFLMVP-27-JBUR)
+    Still open: Fed decision in December — Hike 25bps (KXFEDDECISION-26DEC-H25)
+    Still open: Clarity Act becomes law before Jan 1 2028? (KXCRYPTOSTRUCTURE-27JAN-28)
+    Still open: Next James Bond — Jack Lowden (KXBOND-30-JAC)
+    Still open: NFL MVP — Josh Allen (KXNFLMVP-27-JALL)
+    Still open: Heisman Trophy Winner — Jeremiah Smith (KXHEISMAN-27-JSMIT)
+    Still open: US-Iran nuclear deal before Jan 20 2029? (KXUSAIRANAGREEMENT-27-29JAN20)
+    Still open: Next James Bond — Jack Lowden (KXBOND-30-JAC)
+    Still open: Next James Bond — Josh O'Connor (KXBOND-30-JOS)
+    Still open: Heisman Trophy Winner — CJ Carr (KXHEISMAN-27-CCARR)
+    Still open: Trump administration departures 2026 — Pete Hegseth (KXTRUMPADMINLEAVE-26DEC31-PHEG)
+    Still open: Trump administration departures 2026 — Will Scharf (KXTRUMPADMINLEAVE-26DEC31-WSCH)
+    Still open: Dancing with the Stars S35 Winner — Ezra Frech (KXDANCINGWITHTHESTARS-26DEC31-EFRE)
+    Still open: Next James Bond — Jack Lowden (KXBOND-30-JAC)
+    Still open: Next James Bond — Robert Pattinson (KXBOND-30-ROB)
+    Still open: NFL MVP — Joe Burrow (KXNFLMVP-27-JBUR)
+    Still open: Heisman Trophy Winner — Darian Mensah (KXHEISMAN-27-DMENS)
+    Still open: Heisman Trophy — Jeremiah Smith (KXHEISMAN-27-JSMIT)
+    Still open: Hormuz normal before Nov 1 2027? (KXHORMUZNORM-26MAR17-B271101)
+    Still open: Hormuz normal before Oct 1 2027? (KXHORMUZNORM-26MAR17-B271001)
+    Still open: Press Secretary — Ben Ferguson (KXNEXTPRESSECPERM-29JAN20-BFER)
+    Still open: Oscar — You Can See Everything (KXOSCARPIC-27-YOU)
+  [2026-11-11] Done. 0 of 87 checked, 0 newly resolved.
+  Scorecard written to reports/scorecard.html (28 resolved calls)
+
+==================================================================
+STEP 7: verify_afg.py (after today's changes)
+==================================================================
+  
+  ==============================================================
+  AFG PRE-PUBLICATION INTEGRITY CHECK — 2026-11-11
+  ==============================================================
+  
+  CHECK 1: Database connectivity and schema
+    ✓ PASS  Database accessible with required tables
+           → Tables found: predictions, sqlite_sequence
+  
+  CHECK 2: Required columns in predictions table
+    ✓ PASS  All required columns present
+           → 25 columns verified
+  
+  CHECK 3: Open positions have ticker and category
+    ✓ PASS  No open positions missing ticker or category
+           → All open positions have ticker and category
+  
+  CHECK 4: AFG and Kalshi probabilities in valid range
+    ✓ PASS  All probabilities in valid range
+           → 118 probability pairs verified
+  
+  CHECK 5: No premature resolutions (future settlement date)
+    ✓ PASS  No premature resolutions
+           → 28 resolved contracts validated
+  
+  CHECK 6: No contradictory simultaneous BUY YES + BUY NO on same ticker
+    ✓ PASS  No same-date BUY YES + BUY NO conflicts per ticker
+           → No contradictory same-day calls found
+  
+  CHECK 7: Final-call scoring compliance
+    ✓ PASS  All resolved contracts have a final scorable call
+           → 27 resolved contracts, 1 with Bayesian updates (expected)
+    ⚠ WARN  Bayesian updates noted (not a problem)
+           → 1 tickers updated mid-cycle: KXDROUGHTLEVEL-26JULLD4-OR
+  
+  CHECK 8: Publication dates not in future
+    ✓ PASS  No future-dated published calls
+           → 118 publication dates validated
+  
+  CHECK 9: AFG probability not at hard extremes (0% or 100%) on live calls
+    ✓ PASS  No open calls at hard 0% or 100% AFG probability
+           → 90 open call probabilities checked
+  
+  CHECK 10: Resolved outcomes stored as 0/1 (not YES/NO strings)
+    ✓ PASS  All resolved outcomes stored as 0 or 1
+           → 28 resolved outcomes validated as 0/1
+  
+  CHECK 11: No duplicate active resolved rows per ticker
+    ✓ PASS  No true duplicate resolved rows per ticker
+           → 1 tickers with Bayesian updates (legitimate) — no same-rec/same-date duplicates found
+  
+  CHECK 12: Independent scoring spot-check
+    ✓ PASS  Independent scoring completed without errors
+           → 27 positions scored independently — 13 Correct / 14 Incorrect / 48.1% accuracy
+           ► Verified accuracy: 13/27 = 48.1%
+  
+  CHECK 13: Stored outcomes match Kalshi's settlement record
+    ✓ PASS  Every resolved outcome matches Kalshi (or a documented early resolution)
+           → 27 resolved tickers matched against Kalshi
+  
+  ==============================================================
+  RESULTS: 13/13 checks passed (13-check suite)  |  1 warning(s)
+  ==============================================================
+  
+  ✅ All checks passed. Safe to run the cycle.
+  
+
+  Check 12 accuracy: 13/27 = 48.1%
+
+==================================================================
+STEP 8: 06_build_scorecard.py
+==================================================================
+  Checking stored outcomes against Kalshi's settlement records...
+  TICKER                                     STORED  KALSHI                 CHECK
+  --------------------------------------------------------------------------------
+  FEDHIKE-26DEC31                            1       settled yes            ok
+  KXATP-26USO-ALC                            0       settled no             ok
+  KXBIGBROTHER-26DEC31-DEE                   0       settled no             ok
+  KXBIGBROTHER-26DEC31-DRE                   0       settled no             ok
+  KXBIGBROTHER-26DEC31-RIC                   1       settled yes            ok
+  KXBIGBROTHER-26DEC31-YAS                   0       settled no             ok
+  KXBLANCHEJUDICIARY-27-26OCT01              1       settled yes (archive)  ok
+  KXDROUGHTLEVEL-26JULLD4-OR                 0       settled no (archive)   ok
+  KXEARTHQUAKEM-26AUG-78                     1       settled yes (archive)  ok
+  KXF1-26-KA                                 1       settled yes            ok
+  KXFEDDECISION-26JUL-H0                     1       settled yes (archive)  ok
+  KXFEDDECISION-26SEP-H0                     0       settled no             ok
+  KXFIRSTHURRICANE-26DEC01ATL-FAY            0       settled no             ok
+  KXFIRSTHURRICANE-26DEC01ATL-GON            0       settled no             ok
+  KXFIRSTHURRICANE-26DEC01ATL-HAN            0       settled no             ok
+  KXFIRSTHURRICANE-26DEC01ATL-ISA            1       settled yes            ok
+  KXHMONTH-26JUL                             0       settled no (archive)   ok
+  KXHURCTOTMAJ-26DEC01-T0                    1       settled yes            ok
+  KXMLB-26-LAD                               0       settled no             ok
+  KXNEXTTEAMNBA-26LJAM-CLE                   0       settled no (archive)   ok
+  KXNEXTTEAMNBA-26LJAM-MIA                   0       settled no (archive)   ok
+  KXPGATOUR-3MO26-SSCH                       0       settled no (archive)   ok
+  KXPGATOUR-BMC26-SSCH                       0       settled no (archive)   ok
+  KXPGATOUR-FESJC26-SSCH                     1       settled yes (archive)  ok
+  KXPGATOUR-TOC26-SSCH                       1       settled yes (archive)  ok
+  KXRT-SPI-91                                0       settled no (archive)   ok
+  KXTRUMPADMINLEAVE-26DEC31-SWIL             1       settled yes            ok
+  --------------------------------------------------------------------------------
+  
+  All 27 resolved outcomes match Kalshi or a documented early resolution.
+  
+  ============================================================
+  AFG SCORECARD — FINAL-CALL ONLY — November 11, 2026
+  ============================================================
+  Scored positions : 27
+  Correct          : 13
+  Incorrect        : 14
+  Accuracy         : 48.1%
+  AFG Brier        : 0.268
+  Market Brier     : 0.189
+  Excluded (closed): 0
+  
+  HTML scorecard  : docs\index.html
+  Word scorecard saved: reports\scorecards\AFG_Scorecard_2026-11-11.docx
+  Resolution post: reports\scorecards\AFG_Resolution_Post_2026-11-11.txt
+  
+  Done. Git push to publish: git add -A && git commit -m "scorecard 2026-11-11" && git push
+
+==================================================================
+STEP 9: Accuracy match
+==================================================================
+  Check 12: 48.1%     06_build_scorecard.py: 48.1%
+  MATCH
+
+==================================================================
+STEP 10: Publish the scorecard
+==================================================================
+  All checks passed. Verified accuracy 48.1%.
+  answer: 'push'
+  Not pushed. When ready, run:
+    git add -A && git commit -m "cycle update 2026-11-11" && git push
+
+==================================================================
+NOW PUBLISH (in this order)
+==================================================================
+  1. Substack:      reports\AFG_Substack_Post_2026-11-11.md
+  2. X:             reports\AFG_Twitter_Post_2026-11-11.txt
+  3. Substack Note: reports\AFG_Substack_Note_2026-11-11.txt  (add the link to today's post)
+  4. Resolution post: reports\scorecards\AFG_Resolution_Post_2026-11-11.txt  (attach a scorecard screenshot)
+
+Log saved: logs\run_cycle_2026-11-11.log
