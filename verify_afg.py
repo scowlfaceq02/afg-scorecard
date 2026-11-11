@@ -1,8 +1,13 @@
 """
 verify_afg.py  —  AFG Pre-Publication Integrity Checker
-12 checks before every Monday / Wednesday / Friday cycle
+13 checks before every Monday / Wednesday / Friday cycle
 
 CHANGE LOG:
+  November 11th, 2026 — Added Check 13: every resolved outcome is compared
+  with Kalshi's own settlement result (check_settlements.py). Checks 10-12
+  only compare the database with itself and could not catch the four wrong
+  outcomes found that day. Check 13 fails closed if Kalshi cannot be reached.
+
   November 9th, 2026 — Added checks 10, 11, 12 following full audit
   that found 74.1% reported accuracy was actually 59.3% due to:
     (a) outcome stored as 0/1 integer but parsed as YES/NO string
@@ -23,7 +28,7 @@ USAGE:
   python3 verify_afg.py
 
 EXIT CODES:
-  0 = all 12 checks passed — safe to run the cycle
+  0 = all 13 checks passed — safe to run the cycle
   1 = one or more checks failed — fix before publishing
 """
 
@@ -506,6 +511,23 @@ except Exception as e:
     check("Independent scoring completed without errors", False, str(e))
 
 
+# ── CHECK 13: STORED OUTCOMES MATCH KALSHI'S SETTLEMENT RECORD ────────────────
+print("\nCHECK 13: Stored outcomes match Kalshi's settlement record")
+try:
+    from check_settlements import check_settlements
+    _rep, _probs = check_settlements(DB_PATH, verbose=False)
+    for _p in _probs:
+        print(f"         → {_p}")
+    check(
+        "Every resolved outcome matches Kalshi (or a documented early resolution)",
+        len(_probs) == 0,
+        f"{len(_probs)} problem(s) -- run check_settlements.py for the full table" if _probs
+        else f"{len(_rep)} resolved tickers matched against Kalshi"
+    )
+except Exception as e:
+    check("Every resolved outcome matches Kalshi (or a documented early resolution)", False, str(e))
+
+
 # ── SUMMARY ───────────────────────────────────────────────────────────────────
 conn.close()
 
@@ -515,7 +537,7 @@ warned  = sum(1 for r in results if r[0] == WARN)
 total   = passed + failed
 
 print(f"\n{'='*62}")
-print(f"RESULTS: {passed}/{total} checks passed (12-check suite)", end="")
+print(f"RESULTS: {passed}/{total} checks passed (13-check suite)", end="")
 if warned:
     print(f"  |  {warned} warning(s)", end="")
 print()

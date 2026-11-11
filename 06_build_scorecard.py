@@ -1,5 +1,6 @@
 """
 06_build_scorecard.py  —  AFG Scorecard Builder
+(November 11th, 2026: refuses to build unless check_settlements.py passes.)
 Final-Call Only Scoring  ·  Effective November 6th, 2026
 
 SCORING RULE:
@@ -645,6 +646,16 @@ def build_resolution_post(newly_resolved, today_str, out_dir):
 def main():
     os.makedirs(SCORECARD_DIR, exist_ok=True)
     os.makedirs(DOCS_DIR,      exist_ok=True)
+
+    # Settlement cross-check (added November 11th, 2026). Nothing is built
+    # unless every resolved outcome matches Kalshi's settlement record or a
+    # documented early resolution. There is no bypass.
+    from check_settlements import check_settlements
+    print("Checking stored outcomes against Kalshi's settlement records...")
+    _rep, _probs = check_settlements(DB_PATH, verbose=True)
+    if _probs:
+        print("\nSTOP: scorecard not built. Fix the problems above and re-run.")
+        sys.exit(1)
 
     conn = get_connection()
     scored, closed = fetch_scored_positions(conn)

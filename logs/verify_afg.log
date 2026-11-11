@@ -134,3 +134,93 @@
          1 tickers with Bayesian updates (legitimate) — no same-rec/same-date duplicates found
   ✓ PASS  Independent scoring completed without errors
          27 positions scored independently — 16 Correct / 11 Incorrect / 59.3% accuracy
+
+2026-11-11 — 12/13 passed, 1 warnings [FAILED]
+  ✓ PASS  Database accessible with required tables
+         Tables found: predictions, sqlite_sequence
+  ✓ PASS  All required columns present
+         25 columns verified
+  ✓ PASS  No open positions missing ticker or category
+         All open positions have ticker and category
+  ✓ PASS  All probabilities in valid range
+         111 probability pairs verified
+  ✓ PASS  No premature resolutions
+         28 resolved contracts validated
+  ✓ PASS  No same-date BUY YES + BUY NO conflicts per ticker
+         No contradictory same-day calls found
+  ✓ PASS  All resolved contracts have a final scorable call
+         27 resolved contracts, 1 with Bayesian updates (expected)
+  ⚠ WARN  Bayesian updates noted (not a problem)
+         1 tickers updated mid-cycle: KXDROUGHTLEVEL-26JULLD4-OR
+  ✓ PASS  No future-dated published calls
+         111 publication dates validated
+  ✓ PASS  No open calls at hard 0% or 100% AFG probability
+         83 open call probabilities checked
+  ✓ PASS  All resolved outcomes stored as 0 or 1
+         28 resolved outcomes validated as 0/1
+  ✓ PASS  No true duplicate resolved rows per ticker
+         1 tickers with Bayesian updates (legitimate) — no same-rec/same-date duplicates found
+  ✓ PASS  Independent scoring completed without errors
+         27 positions scored independently — 16 Correct / 11 Incorrect / 59.3% accuracy
+  ✗ FAIL  Every resolved outcome matches Kalshi (or a documented early resolution)
+         15 problem(s) -- run check_settlements.py for the full table
+
+2026-11-11 — 12/13 passed, 1 warnings [FAILED]
+  ✓ PASS  Database accessible with required tables
+         Tables found: predictions, sqlite_sequence
+  ✓ PASS  All required columns present
+         25 columns verified
+  ✗ FAIL  No open positions missing ticker or category
+         7 rows missing ticker/category — fix before publishing
+  ✓ PASS  All probabilities in valid range
+         118 probability pairs verified
+  ✓ PASS  No premature resolutions
+         28 resolved contracts validated
+  ✓ PASS  No same-date BUY YES + BUY NO conflicts per ticker
+         No contradictory same-day calls found
+  ✓ PASS  All resolved contracts have a final scorable call
+         27 resolved contracts, 1 with Bayesian updates (expected)
+  ⚠ WARN  Bayesian updates noted (not a problem)
+         1 tickers updated mid-cycle: KXDROUGHTLEVEL-26JULLD4-OR
+  ✓ PASS  No future-dated published calls
+         118 publication dates validated
+  ✓ PASS  No open calls at hard 0% or 100% AFG probability
+         90 open call probabilities checked
+  ✓ PASS  All resolved outcomes stored as 0 or 1
+         28 resolved outcomes validated as 0/1
+  ✓ PASS  No true duplicate resolved rows per ticker
+         1 tickers with Bayesian updates (legitimate) — no same-rec/same-date duplicates found
+  ✓ PASS  Independent scoring completed without errors
+         27 positions scored independently — 13 Correct / 14 Incorrect / 48.1% accuracy
+  ✓ PASS  Every resolved outcome matches Kalshi (or a documented early resolution)
+         27 resolved tickers matched against Kalshi
+
+2026-11-11 — 13/13 passed, 1 warnings
+  ✓ PASS  Database accessible with required tables
+         Tables found: predictions, sqlite_sequence
+  ✓ PASS  All required columns present
+         25 columns verified
+  ✓ PASS  No open positions missing ticker or category
+         All open positions have ticker and category
+  ✓ PASS  All probabilities in valid range
+         118 probability pairs verified
+  ✓ PASS  No premature resolutions
+         28 resolved contracts validated
+  ✓ PASS  No same-date BUY YES + BUY NO conflicts per ticker
+         No contradictory same-day calls found
+  ✓ PASS  All resolved contracts have a final scorable call
+         27 resolved contracts, 1 with Bayesian updates (expected)
+  ⚠ WARN  Bayesian updates noted (not a problem)
+         1 tickers updated mid-cycle: KXDROUGHTLEVEL-26JULLD4-OR
+  ✓ PASS  No future-dated published calls
+         118 publication dates validated
+  ✓ PASS  No open calls at hard 0% or 100% AFG probability
+         90 open call probabilities checked
+  ✓ PASS  All resolved outcomes stored as 0 or 1
+         28 resolved outcomes validated as 0/1
+  ✓ PASS  No true duplicate resolved rows per ticker
+         1 tickers with Bayesian updates (legitimate) — no same-rec/same-date duplicates found
+  ✓ PASS  Independent scoring completed without errors
+         27 positions scored independently — 13 Correct / 14 Incorrect / 48.1% accuracy
+  ✓ PASS  Every resolved outcome matches Kalshi (or a documented early resolution)
+         27 resolved tickers matched against Kalshi
