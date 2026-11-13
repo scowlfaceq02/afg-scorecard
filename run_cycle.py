@@ -12,8 +12,11 @@ What it does, in order, stopping at the first problem:
   2. verify_afg.py            integrity check BEFORE anything changes
   3. 04_build_report.py       report, workbook, Substack post, X post, Note
   4. 045_log_predictions.py   logs today's calls
+ 4b. journal.py               records each call's reasoning (outside view,
+                              rationale, counterargument) -- append-only
   5. ticker backfill          fills `ticker` on newly logged rows
   6. 05_update_scorecard.py   records any settlements from Kalshi
+ 6b. post_mortem.py           writes a review sheet for newly settled positions
   7. verify_afg.py            all 13 checks again, incl. Kalshi settlement check
   8. 06_build_scorecard.py    builds the Word scorecard and the website
   9. Accuracy match           06's accuracy must equal Check 12's
@@ -95,7 +98,7 @@ say(f"Folder: {os.getcwd()}    Date: {TODAY:%A, %B} {TODAY.day}, {TODAY.year}")
 
 required_scripts = ["verify_afg.py", "04_build_report.py", "045_log_predictions.py",
                     "05_update_scorecard.py", "06_build_scorecard.py", "check_settlements.py",
-                    "afg_scorecard.db"]
+                    "journal.py", "post_mortem.py", "afg_scorecard.db"]
 missing = [f for f in required_scripts if not os.path.exists(f)]
 if missing:
     stop(f"missing from this folder: {', '.join(missing)}",
@@ -132,6 +135,16 @@ dates = {r.get("report_date", "").strip() for r in rows}
 if dates != {STAMP}:
     stop(f"approved_predictions.csv has report_date {sorted(dates)}, expected {STAMP}",
          "ask Claude to re-send today's approved_predictions.csv")
+journal_cols = [c for c in ("outside_view", "rationale", "counterargument") if c not in rows[0]]
+if journal_cols:
+    stop(f"approved_predictions.csv has no {', '.join(journal_cols)} column(s)",
+         "ask Claude to re-send today's approved_predictions.csv with the reasoning columns")
+import journal  # noqa: E402  (validates the reasoning BEFORE anything is changed)
+_, _, jprobs = journal.log_journal(csv_path="data/approved_predictions.csv", dry_run=True)
+if jprobs:
+    stop("the journal would refuse today's calls: " + "; ".join(jprobs[:3]) +
+         (f" (+{len(jprobs) - 3} more)" if len(jprobs) > 3 else ""),
+         "ask Claude to re-send approved_predictions.csv with the missing reasoning filled in")
 narr = open("data/approved_narrative.md", encoding="utf-8").read()
 for section in ("## Executive Summary", "## Twitter Post", "## Substack Note"):
     if section not in narr:
@@ -158,6 +171,13 @@ code, _ = py("045_log_predictions.py")
 if code != 0:
     stop("045_log_predictions.py failed", "send the log to Claude")
 
+# ── 4b. JOURNAL ───────────────────────────────────────────────────────────────
+banner("4b", "journal.py (reasoning at forecast time)")
+code, _ = py("journal.py")
+if code != 0:
+    stop("the journal refused today's calls (see the lines above)",
+         "ask Claude to re-send approved_predictions.csv with the missing reasoning filled in")
+
 # ── 5. TICKER BACKFILL ────────────────────────────────────────────────────────
 banner(5, "Fill ticker on newly logged rows")
 conn = sqlite3.connect("afg_scorecard.db")
@@ -174,6 +194,12 @@ banner(6, "05_update_scorecard.py")
 code, _ = py("05_update_scorecard.py")
 if code != 0:
     stop("05_update_scorecard.py failed", "send the log to Claude")
+
+# ── 6b. POST-MORTEMS ──────────────────────────────────────────────────────────
+banner("6b", "post_mortem.py (review sheet for newly settled positions)")
+code, _ = py("post_mortem.py")
+if code != 0:
+    stop("post_mortem.py failed", "send the log to Claude")
 
 # ── 7. VERIFY AFTER ───────────────────────────────────────────────────────────
 banner(7, "verify_afg.py (after today's changes)")
@@ -239,6 +265,10 @@ say(f"  3. Substack Note: reports\\AFG_Substack_Note_{STAMP}.txt  (add the link 
 res = f"reports\\scorecards\\AFG_Resolution_Post_{STAMP}.txt"
 if os.path.exists(res.replace("\\", os.sep)):
     say(f"  4. Resolution post: {res}  (attach a scorecard screenshot)")
+pm = os.path.join("reports", "post_mortems", f"post_mortem_{STAMP}.md")
+if os.path.exists(pm):
+    say(f"\n  REVIEW (not published): {pm}")
+    say("  Answer the five questions for each position before the next cycle.")
 say(f"\nLog saved: {LOG_PATH}")
 _log.close()
 try:

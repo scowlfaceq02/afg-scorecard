@@ -22,7 +22,10 @@ RULES (applied per contract, in report-date order)
                     table.
   4. REOPEN         If AFG publishes a BUY call on a contract it had closed,
                     that call is logged and the position is open again.
-  5. SAME DIRECTION Repeating an existing open call logs nothing new.
+  5. SAME DIRECTION Repeating an existing open call adds no new row. RULE 5b:
+                    the open row is refreshed to the latest published
+                    probability and Kalshi price (direction and first-call
+                    date unchanged) so Brier uses the final call.
   6. RESOLVED       Contracts already resolved in the database are never
                     modified by these rules.
   8. SUPERSEDED     Rows set aside by the backfill (status 'Superseded') are
@@ -202,11 +205,11 @@ def _insert(conn, r, ticker, report_date):
     afg_p, kal_p = float(r["afg_probability"]), float(r["kalshi_price"])
     conn.execute(
         """INSERT INTO predictions
-           (market, category, kalshi_ticker, report_date, kalshi_price,
+           (market, category, kalshi_ticker, ticker, report_date, kalshi_price,
             afg_probability, edge_score, conviction, recommendation,
             contract_close_date, status, afg_closed)
-           VALUES (?,?,?,?,?,?,?,?,?,?, 'Open', 0)""",
-        (r["market"], r["category"], ticker, report_date, kal_p, afg_p,
+           VALUES (?,?,?,?,?,?,?,?,?,?,?, 'Open', 0)""",
+        (r["market"], r["category"], ticker, ticker, report_date, kal_p, afg_p,
          round(afg_p - kal_p, 4), r["conviction"], direction(r["recommendation"]),
          iso(r.get("contract_close_date"))),
     )
@@ -253,7 +256,27 @@ def process_cycle(conn, report_date, rows, events):
                 _insert(conn, r, ticker, report_date)
                 events.append(("reversal", ticker, r["market"],
                                f"{direction(latest['recommendation'])} -> {rec} on {report_date}"))
-            # else rule 5: same direction, nothing new
+            else:
+                # RULE 5b: same direction. No new row; refresh the open row to
+                # the latest published call so Brier scores the final call.
+                afg_p = float(r["afg_probability"])
+                kal_p = float(r["kalshi_price"])
+                cur = conn.execute(
+                    "SELECT afg_probability, kalshi_price FROM predictions WHERE id=?",
+                    (latest["id"],)).fetchone()
+                if (cur is not None and latest["status"] == "Open"
+                        and (abs(float(cur[0]) - afg_p) > 1e-9
+                             or abs(float(cur[1]) - kal_p) > 1e-9)):
+                    conn.execute(
+                        "UPDATE predictions SET afg_probability=?, kalshi_price=?, "
+                        "edge_score=?, conviction=?, "
+                        "ticker=COALESCE(NULLIF(ticker, ''), ?) WHERE id=?",
+                        (afg_p, kal_p, round(afg_p - kal_p, 4), r["conviction"],
+                         ticker, latest["id"]))
+                    conn.commit()
+                    print(f"  reprice  {ticker}: {rec} "
+                          f"{float(cur[0]):.0%}/{float(cur[1]):.0%} -> "
+                          f"{afg_p:.0%}/{kal_p:.0%}  (row {latest['id']})")
 
         else:  # NO TRADE
             if live and not all(x["afg_closed"] for x in live):

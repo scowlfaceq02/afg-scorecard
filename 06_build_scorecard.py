@@ -347,10 +347,8 @@ def build_html(scored, closed, stats, today_str):
 </header>
 <main>
   <div class="methodology-banner">
-    <strong>Scoring methodology revised November 6th, 2026.</strong>
-    AFG is scored on the <strong>final published call</strong> at the time of contract settlement only.
-    Bayesian updating — revising a position as new evidence arrives — is correct forecasting behavior and carries no penalty.
-    Closed positions (NO TRADE at settlement) are excluded from the win/loss record and disclosed separately below.
+    AFG is scored on the <strong>final published call</strong> at the time of contract settlement,
+    following Good Judgment and Superforecaster methodology.
   </div>
 
   <div class="section-title">Final-Call Accuracy — Summary</div>
@@ -452,9 +450,8 @@ def build_html(scored, closed, stats, today_str):
   <div class="legend-box">
     <h3>Publishing Cadence &amp; Methodology</h3>
     <p>AFG publishes research every <strong>Monday, Wednesday, and Friday</strong>.
-    Each cycle covers the top five highest-volume Kalshi markets in Sports, Economics, Politics,
-    Culture, and Weather &amp; Climate. Probabilities are derived using Bayesian reasoning,
-    historical base rates, and behavioral finance principles.</p>
+    Probabilities are derived using Bayesian reasoning, historical base rates, and
+    behavioral finance principles.</p>
     <br/>
     <p>Scoring uses <strong>final-call accuracy only</strong> — the most recently published
     recommendation at the time of contract settlement. All position changes are logged internally
