@@ -93,7 +93,8 @@ def fetch_scored_positions(conn):
 
         # Get ALL published calls for this ticker, in date order
         cur.execute("""
-            SELECT recommendation, afg_probability, kalshi_price, published_date
+            SELECT recommendation, afg_probability, kalshi_price, published_date,
+                   COALESCE(afg_closed, 0), afg_closed_date, afg_closed_reason
             FROM predictions
             WHERE ticker = ?
             AND recommendation IN ('BUY YES', 'BUY NO', 'NO TRADE')
@@ -107,16 +108,16 @@ def fetch_scored_positions(conn):
 
         # Find the last published call at or before settlement
         last_call = None
-        for rec, afg_p, kal_p, pub_date_raw in calls:
+        for rec, afg_p, kal_p, pub_date_raw, flag, cdate, creason in calls:
             pub_date = _parse_date(pub_date_raw)
             if settle_date and pub_date and pub_date > settle_date:
                 break
-            last_call = (rec, afg_p, kal_p, pub_date_raw)
+            last_call = (rec, afg_p, kal_p, pub_date_raw, flag, cdate, creason)
 
         if last_call is None:
             continue
 
-        final_rec, afg_p, kal_p, pub_date = last_call
+        final_rec, afg_p, kal_p, pub_date, closed_flag, closed_date_raw, closed_reason = last_call
 
         # Convert probabilities (stored as 0.0–1.0 decimals or 0–100 ints)
         try:
@@ -125,8 +126,18 @@ def fetch_scored_positions(conn):
         except (TypeError, ValueError):
             afg_pct = kalshi_pct = 0.0
 
-        # Closed = last call was NO TRADE
-        is_closed = (final_rec == "NO TRADE")
+        # Closed = AFG exited the position before settlement. The logging rules
+        # record an exit by flagging the call (afg_closed = 1, afg_closed_date),
+        # not by storing a NO TRADE row. A closure only counts if it is dated
+        # on or before the settlement date (resolution_date).
+        closed_on = _parse_date(closed_date_raw)
+        settled_on = _parse_date(resolution_date_raw)
+        closed_by_flag = bool(closed_flag) and closed_on is not None and (
+            settled_on is None or closed_on <= settled_on)
+        if closed_flag and not closed_by_flag:
+            print(f"  WARNING: {ticker} is flagged closed ({closed_date_raw}) but the closure is not "
+                  f"dated on or before settlement ({resolution_date_raw}); scored as a live call.")
+        is_closed = (final_rec == "NO TRADE") or closed_by_flag
 
         # Brier score (on AFG probability at final call)
         # outcome stored as integer 0/1 — also accept legacy "YES"/"NO" strings
@@ -148,6 +159,8 @@ def fetch_scored_positions(conn):
             "outcome":         str(outcome).upper(),
             "brier":           brier,
             "closed":          is_closed,
+            "closed_date":     closed_date_raw,
+            "closed_reason":   closed_reason,
         }
 
         if is_closed:
@@ -312,8 +325,9 @@ def build_html(scored, closed, stats, today_str):
         call_badge = badge("BUY YES", "buy-yes") if r["final_call"] == "BUY YES" else badge("BUY NO", "buy-no")
         wh = r.get("would_have", "—")
         wh_badge = badge("✓ Correct", "correct") if "Correct" in wh else badge("✗ Incorrect", "incorrect")
-        # Parse close date for display
-        cd = _parse_date(r.get("settle_date")) or r.get("settle_date", "—")
+        # AFG's closure date (not the contract's close date)
+        _cd = _parse_date(r.get("closed_date"))
+        cd = f"{_cd:%b} {_cd.day}, {_cd.year}" if _cd else "—"
         closed_rows += f"""
         <tr>
           <td>{i}</td>
@@ -671,6 +685,13 @@ def main():
     print(f"AFG Brier        : {stats['afg_brier']:.3f}")
     print(f"Market Brier     : {stats['mkt_brier']:.3f}")
     print(f"Excluded (closed): {len(closed)}")
+    if closed:
+        print("\n  Closed before settlement (excluded from the record, shown in the disclosure table):")
+        for r in sorted(closed, key=lambda x: str(x.get("closed_date"))):
+            print(f"    {r['ticker']:<38} {r['final_call']:<8} closed {r.get('closed_date')}  "
+                  f"outcome {r['outcome']}  would have been {r.get('would_have')}")
+            if r.get("closed_reason"):
+                print(f"      reason on file: {r['closed_reason']}")
 
     # Premature resolution guard
     # Allow early resolution when resolution_date is set and in the past

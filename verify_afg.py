@@ -462,12 +462,14 @@ try:
 
     correct = 0
     incorrect = 0
+    excluded_closed = 0
     scoring_errors = []
 
     for ticker in tickers:
         # Final call = last BUY YES/BUY NO row by id
         cur.execute("""
-            SELECT id, recommendation, afg_probability, outcome
+            SELECT id, recommendation, afg_probability, outcome,
+                   COALESCE(afg_closed, 0), afg_closed_date, resolution_date
             FROM predictions
             WHERE ticker = ?
             AND outcome IS NOT NULL AND outcome != ''
@@ -478,7 +480,13 @@ try:
         row = cur.fetchone()
         if not row:
             continue
-        row_id, rec, afg_p, outcome_raw = row
+        row_id, rec, afg_p, outcome_raw, closed_flag, closed_raw, resolved_raw = row
+        # A position AFG exited before settlement is excluded from the record
+        # (disclosed separately). The exit must be dated on or before settlement.
+        _c, _r = _parse_date(closed_raw), _parse_date(resolved_raw)
+        if closed_flag and _c is not None and (_r is None or _c <= _r):
+            excluded_closed += 1
+            continue
         try:
             o = int(str(outcome_raw).strip())
             assert o in (0, 1)
@@ -497,6 +505,7 @@ try:
     detail = (
         f"{n} positions scored independently — "
         f"{correct} Correct / {incorrect} Incorrect / {acc:.1f}% accuracy"
+        f" | {excluded_closed} closed before settlement (excluded)"
     )
     if scoring_errors:
         detail += f" | ERRORS: {scoring_errors[:5]}"
