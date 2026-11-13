@@ -1,0 +1,7 @@
+contract,change,reason,source,date
+"Fed decision in September — Maintains rate",moved_to_closed,"AFG exited (NO TRADE) on 2026-08-31 before settlement; closed positions are excluded from the win/loss record and disclosed","afg_scorecard.db afg_closed flag; afg_logging_rules rule 3",2026-11-12
+"This July 2026 is the hottest July ever?",moved_to_closed,"AFG exited (NO TRADE) on 2026-08-12 before settlement; excluded and disclosed","afg_scorecard.db afg_closed flag; afg_logging_rules rule 3",2026-11-12
+"US Open Men's Singles — Carlos Alcaraz",moved_to_closed,"AFG exited (NO TRADE) on 2026-09-02 before settlement; excluded and disclosed","afg_scorecard.db afg_closed flag; afg_logging_rules rule 3",2026-11-12
+"Next Fed rate hike — Before 2027",moved_to_closed,"AFG exited (NO TRADE) on 2026-09-11 before settlement; excluded and disclosed","afg_scorecard.db afg_closed flag; afg_logging_rules rule 3",2026-11-12
+"Major Atlantic hurricanes 2026 — Above 0",moved_to_closed,"AFG exited (NO TRADE) on 2026-10-07; excluded and disclosed (exit date to be confirmed against the Oct 7 report)","afg_scorecard.db afg_closed flag; Oct 7 report to be confirmed",2026-11-12
+"First Atlantic hurricane — Isaias",moved_to_closed,"AFG exited (NO TRADE) on 2026-10-07; closure date equals settlement date; excluded and disclosed","afg_scorecard.db afg_closed flag; afg_logging_rules rule 3",2026-11-12

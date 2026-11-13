@@ -20,6 +20,7 @@ What it does, in order, stopping at the first problem:
   7. verify_afg.py            all 13 checks again, incl. Kalshi settlement check
   8. 06_build_scorecard.py    builds the Word scorecard and the website
   9. Accuracy match           06's accuracy must equal Check 12's
+ 9b. audit_published.py      independent audit of the page about to go public
  10. Push                     asks you to type PUSH, then git add/commit/push
 
 Everything it prints is also saved to logs\\run_cycle_<date>.log. If it stops,
@@ -98,7 +99,8 @@ say(f"Folder: {os.getcwd()}    Date: {TODAY:%A, %B} {TODAY.day}, {TODAY.year}")
 
 required_scripts = ["verify_afg.py", "04_build_report.py", "045_log_predictions.py",
                     "05_update_scorecard.py", "06_build_scorecard.py", "check_settlements.py",
-                    "journal.py", "post_mortem.py", "afg_scorecard.db"]
+                    "journal.py", "post_mortem.py", "audit_published.py", "test_scorecard_rules.py",
+                    "afg_scorecard.db"]
 missing = [f for f in required_scripts if not os.path.exists(f)]
 if missing:
     stop(f"missing from this folder: {', '.join(missing)}",
@@ -114,10 +116,18 @@ checks = {
     "check_settlements.py": "KALSHI_HISTORICAL_URL",
     "verify_afg.py": "CHECK 13",
     "06_build_scorecard.py": "check_settlements",
+    "audit_published.py": "t6_change_control",
 }
 for f, marker in checks.items():
     if marker not in open(f, encoding="utf-8", errors="replace").read():
         stop(f"{f} is an old version", f"save the current {f} from Claude into this folder")
+
+# Guardrail 1: scoring-rule regression tests (throwaway fixture; touches nothing real)
+say("\n  Running scorecard rule tests ...")
+code, _ = py("test_scorecard_rules.py")
+if code != 0:
+    stop("a scorecard rule test failed -- a script no longer follows AFG's published scoring rules",
+         "nothing has been changed or published. Send the log to Claude.")
 
 inputs = ["data/approved_predictions.csv", "data/approved_narrative.md", "data/raw_markets.xlsx"]
 for f in inputs:
@@ -229,6 +239,14 @@ say(f"  Check 12: {check12:.1f}%     06_build_scorecard.py: {acc06:.1f}%")
 if abs(check12 - acc06) > 0.05:
     stop("the two accuracy figures differ", "do not publish. Send the log to Claude.")
 say("  MATCH")
+
+# ── 9b. PUBLICATION AUDIT ─────────────────────────────────────────────────────
+banner("9b", "audit_published.py (independent audit of the page about to go public)")
+code, _ = py("audit_published.py")
+if code != 0:
+    stop("the publication audit BLOCKED the scorecard -- do not push",
+         "read the FAIL lines above. If a position moved between scored and closed, add a row to "
+         "scorecard_changes.csv (contract,change,reason,source,date). Otherwise send the log to Claude.")
 
 # ── 10. PUSH ──────────────────────────────────────────────────────────────────
 banner(10, "Publish the scorecard")

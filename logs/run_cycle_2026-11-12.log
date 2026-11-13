@@ -1,0 +1,104 @@
+
+==================================================================
+STEP 1: Pre-flight checks
+==================================================================
+Folder: C:\Users\qwhit\AFG    Date: Thursday, November 12, 2026
+
+  Running scorecard rule tests ...
+  A. The builder follows the scoring rules
+  
+    WARNING: LATE is flagged closed (2026-10-25) but the closure is not dated on or before settlement (2026-10-20); scored as a live call.
+  PASS  six positions exited before settlement are excluded and disclosed
+  PASS  none of them is scored
+  PASS  an exit dated AFTER settlement does not exclude the position
+  PASS  final call is the latest BUY row (reversal scored as BUY YES)
+  PASS  Void rows are invisible
+  PASS  conservation: scored + closed = every settled contract
+  PASS  outcomes are YES/NO text
+  PASS  Market Brier uses the real outcomes (not all-NO)
+    ✓ PASS  Headline numbers equal an independent recomputation
+             → 7/12 = 58.3%  |  AFG Brier 0.262  |  Market Brier 0.251  |  6 closed
+    ✓ PASS  Every row on the page matches the database
+             → 12 scored rows and 6 closed rows checked
+    ✓ PASS  Every settled contract is either scored or disclosed (nothing dropped)
+             → 18 settled = 12 scored + 6 closed
+  PASS  the page the builder writes passes audit tests 1-3
+    ✓ PASS  No proprietary wording in public material
+             → 2 public file(s) scanned
+  PASS  no proprietary wording on the page (test 5)
+  
+  B. The audit catches the failures that reached the live site
+  
+    ✗ FAIL  Headline numbers equal an independent recomputation
+             → Accuracy %: page shows 44.4, database says 58.3
+             → Scored: page shows 18.0, database says 12
+             → Correct: page shows 8.0, database says 7
+             → Incorrect: page shows 10.0, database says 5
+             → Excluded: page shows 0.0, database says 6
+             → AFG Brier: page shows 0.28, database says 0.2625
+             → Market Brier: page shows 0.247, database says 0.250833
+    ✗ FAIL  Every row on the page matches the database
+             → on the scored table but not scored in the database: Fed September
+             → on the scored table but not scored in the database: Hottest July
+             → on the scored table but not scored in the database: Isaias
+             → on the scored table but not scored in the database: Major hurricanes
+             → on the scored table but not scored in the database: Next Fed rate hike
+             → on the scored table but not scored in the database: US Open Alcaraz
+             → AFG exited this position before settlement but it is not in the closed table: Fed September
+             → AFG exited this position before settlement but it is not in the closed table: Hottest July
+             → AFG exited this position before settlement but it is not in the closed table: Isaias
+             → AFG exited this position before settlement but it is not in the closed table: Major hurricanes
+             → AFG exited this position before settlement but it is not in the closed table: Next Fed rate hike
+             → AFG exited this position before settlement but it is not in the closed table: US Open Alcaraz
+    ✓ PASS  Every settled contract is either scored or disclosed (nothing dropped)
+             → 18 settled = 12 scored + 6 closed
+  PASS  catches closed positions being scored as if held
+    ✗ FAIL  Headline numbers equal an independent recomputation
+             → Market Brier: page shows 0.189, database says 0.250833
+  PASS  catches a wrong Market Brier score
+    ✗ FAIL  Headline numbers equal an independent recomputation
+             → Accuracy %: page shows 99.9, database says 58.3
+  PASS  catches a wrong headline accuracy
+    ✗ FAIL  Every row on the page matches the database
+             → missing from the scored table: Reversed call
+    ✗ FAIL  Every settled contract is either scored or disclosed (nothing dropped)
+             → page tables list 17 contracts; database has 18 settled contracts
+  PASS  catches a settled contract disappearing from the page
+    ✗ FAIL  No proprietary wording in public material
+             → docs\index.html: "highest-volume" (reveals that markets are screened by trading volume)
+             → docs\index.html: "top five" (reveals the top-five screening rule)
+  PASS  catches proprietary screening wording
+    ✗ FAIL  No proprietary wording in public material
+             → docs\index.html: "methodology revised" (internal methodology revision date)
+             → docs\index.html: "revised November" (internal methodology revision date)
+  PASS  catches the methodology revision date
+    ✗ FAIL  Changes to the published record are documented
+             → Hottest July  [moved_to_closed]  was scored (BUY YES, Incorrect)
+             → Fed September  [moved_to_closed]  was scored (BUY YES, Incorrect)
+             → Next Fed rate hike  [moved_to_closed]  was scored (BUY YES, Correct)
+             → US Open Alcaraz  [moved_to_closed]  was scored (BUY YES, Incorrect)
+             → Major hurricanes  [moved_to_closed]  was scored (BUY NO, Incorrect)
+             → Isaias  [moved_to_closed]  was scored (BUY NO, Incorrect)
+             → Document each in scorecard_changes.csv (columns: contract,change,reason,source,date), then rerun.
+  PASS  catches positions silently moved from scored to closed
+    ✓ PASS  Changes to the published record are documented
+             → 6 reclassification(s) documented; 0 newly settled contract(s) added
+  PASS  accepts the same moves once each is documented with a reason and source
+    ✗ FAIL  Changes to the published record are documented
+             → Hottest July  [moved_to_closed]  was scored (BUY YES, Incorrect)
+             → Fed September  [moved_to_closed]  was scored (BUY YES, Incorrect)
+             → Next Fed rate hike  [moved_to_closed]  was scored (BUY YES, Correct)
+             → US Open Alcaraz  [moved_to_closed]  was scored (BUY YES, Incorrect)
+             → Major hurricanes  [moved_to_closed]  was scored (BUY NO, Incorrect)
+             → Isaias  [moved_to_closed]  was scored (BUY NO, Incorrect)
+             → Document each in scorecard_changes.csv (columns: contract,change,reason,source,date), then rerun.
+  PASS  rejects documentation with no reason or source
+  
+  ALL SCORECARD RULES HOLD.
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+STOPPED: data/approved_predictions.csv was last saved 2026-11-11, not today
+FIX:     the new download did not replace it. Save today's file from Claude into data\ and replace the old one.
+Nothing has been pushed or published.
+Full log: logs\run_cycle_2026-11-12.log  (send this file to Claude if you need help)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

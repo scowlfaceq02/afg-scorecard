@@ -156,7 +156,9 @@ def fetch_scored_positions(conn):
             "published_date":  pub_date,
             "settle_date":     close_date_raw,
             "resolution_date": resolution_date_raw,
-            "outcome":         str(outcome).upper(),
+            # Always "YES" / "NO": the Market Brier, the Settled columns and the
+            # resolution post all read this field as text.
+            "outcome":         "YES" if o == 1 else "NO",
             "brier":           brier,
             "closed":          is_closed,
             "closed_date":     closed_date_raw,
