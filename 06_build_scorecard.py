@@ -99,9 +99,17 @@ def fetch_scored_positions(conn):
             WHERE ticker = ?
             AND recommendation IN ('BUY YES', 'BUY NO', 'NO TRADE')
             AND status NOT IN ('Void', 'Superseded')
-            ORDER BY published_date ASC, rowid ASC
+            ORDER BY COALESCE(NULLIF(TRIM(published_date), ''), '9999-12-31') ASC, rowid ASC
         """, (ticker,))
         calls = cur.fetchall()
+        # A call logged without a publication date is treated as the most recent call
+        # (it is ordered by row number among undated calls), the same rule verify_afg.py
+        # check 12 and audit_published.py use. SQLite would otherwise sort a missing date
+        # FIRST and silently skip that call (the Jack Lowden case, November 18th, 2026).
+        undated = [c for c in calls if not str(c[3] or "").strip()]
+        if undated:
+            print(f"  WARNING: {ticker} has {len(undated)} published call(s) with no publication date; "
+                  f"treated as the latest call. Run fix_null_published_dates.py to restore the date.")
 
         if not calls:
             continue
@@ -154,7 +162,9 @@ def fetch_scored_positions(conn):
             "afg_pct":         round(afg_pct, 1),
             "kalshi_pct":      round(kalshi_pct, 1),
             "published_date":  pub_date,
-            "settle_date":     close_date_raw,
+            # A row logged without a contract close date falls back to the settlement
+            # date, so sorting and the premature-resolution guard never meet None.
+            "settle_date":     close_date_raw or resolution_date_raw or "",
             "resolution_date": resolution_date_raw,
             # Always "YES" / "NO": the Market Brier, the Settled columns and the
             # resolution post all read this field as text.
@@ -305,7 +315,7 @@ def build_html(scored, closed, stats, today_str):
 
     # Resolved forecasts rows
     forecast_rows = ""
-    for i, r in enumerate(sorted(scored, key=lambda x: x.get("settle_date", "")), 1):
+    for i, r in enumerate(sorted(scored, key=lambda x: str(x.get("settle_date") or "")), 1):
         call_badge  = badge("BUY YES", "buy-yes") if r["final_call"] == "BUY YES" else badge("BUY NO", "buy-no")
         result_badge = badge("✓ Correct", "correct") if r["result"] == "Correct" else badge("✗ Incorrect", "incorrect")
         forecast_rows += f"""
@@ -572,7 +582,7 @@ def build_word_scorecard(scored, closed, stats, today_str, out_path):
         cell.paragraphs[0].runs[0].font.size  = Pt(9)
         set_cell_bg(cell, "0D1B2A")
 
-    for idx, r in enumerate(sorted(scored, key=lambda x: x.get("settle_date", "")), 1):
+    for idx, r in enumerate(sorted(scored, key=lambda x: str(x.get("settle_date") or "")), 1):
         row = t.add_row()
         vals = [
             str(idx), r["market"], r["category"], r["final_call"],
