@@ -1,0 +1,552 @@
+
+==================================================================
+STEP 1: Pre-flight checks
+==================================================================
+Folder: C:\Users\qwhit\AFG    Date: Friday, November 20, 2026
+
+  Running scorecard rule tests ...
+  A. The builder follows the scoring rules
+  
+    WARNING: LATE is flagged closed (2026-10-25) but the closure is not dated on or before settlement (2026-10-20); scored as a live call.
+  PASS  six positions exited before settlement are excluded and disclosed
+  PASS  none of them is scored
+  PASS  an exit dated AFTER settlement does not exclude the position
+  PASS  final call is the latest BUY row (reversal scored as BUY YES)
+  PASS  Void rows are invisible
+  PASS  conservation: scored + closed = every settled contract
+  PASS  outcomes are YES/NO text
+  PASS  Market Brier uses the real outcomes (not all-NO)
+    ✓ PASS  Headline numbers equal an independent recomputation
+             → 7/12 = 58.3%  |  AFG Brier 0.262  |  Market Brier 0.251  |  6 closed
+    ✓ PASS  Every row on the page matches the database
+             → 12 scored rows and 6 closed rows checked
+    ✓ PASS  Every settled contract is either scored or disclosed (nothing dropped)
+             → 18 settled = 12 scored + 6 closed
+  PASS  the page the builder writes passes audit tests 1-3
+    ✓ PASS  No proprietary wording in public material
+             → 1 public file(s) scanned
+  PASS  no proprietary wording on the page (test 5)
+  
+  B. The audit catches the failures that reached the live site
+  
+    ✗ FAIL  Headline numbers equal an independent recomputation
+             → Accuracy %: page shows 44.4, database says 58.3
+             → Scored: page shows 18.0, database says 12
+             → Correct: page shows 8.0, database says 7
+             → Incorrect: page shows 10.0, database says 5
+             → Excluded: page shows 0.0, database says 6
+             → AFG Brier: page shows 0.28, database says 0.2625
+             → Market Brier: page shows 0.247, database says 0.250833
+    ✗ FAIL  Every row on the page matches the database
+             → on the scored table but not scored in the database: Fed September
+             → on the scored table but not scored in the database: Hottest July
+             → on the scored table but not scored in the database: Isaias
+             → on the scored table but not scored in the database: Major hurricanes
+             → on the scored table but not scored in the database: Next Fed rate hike
+             → on the scored table but not scored in the database: US Open Alcaraz
+             → AFG exited this position before settlement but it is not in the closed table: Fed September
+             → AFG exited this position before settlement but it is not in the closed table: Hottest July
+             → AFG exited this position before settlement but it is not in the closed table: Isaias
+             → AFG exited this position before settlement but it is not in the closed table: Major hurricanes
+             → AFG exited this position before settlement but it is not in the closed table: Next Fed rate hike
+             → AFG exited this position before settlement but it is not in the closed table: US Open Alcaraz
+    ✓ PASS  Every settled contract is either scored or disclosed (nothing dropped)
+             → 18 settled = 12 scored + 6 closed
+  PASS  catches closed positions being scored as if held
+    ✗ FAIL  Headline numbers equal an independent recomputation
+             → Market Brier: page shows 0.189, database says 0.250833
+  PASS  catches a wrong Market Brier score
+    ✗ FAIL  Headline numbers equal an independent recomputation
+             → Accuracy %: page shows 99.9, database says 58.3
+  PASS  catches a wrong headline accuracy
+    ✗ FAIL  Every row on the page matches the database
+             → missing from the scored table: Reversed call
+    ✗ FAIL  Every settled contract is either scored or disclosed (nothing dropped)
+             → page tables list 17 contracts; database has 18 settled contracts
+  PASS  catches a settled contract disappearing from the page
+    ✗ FAIL  No proprietary wording in public material
+             → docs\index.html: "highest-volume" (reveals that markets are screened by trading volume)
+             → docs\index.html: "top five" (reveals the top-five screening rule)
+  PASS  catches proprietary screening wording
+    ✗ FAIL  No proprietary wording in public material
+             → docs\index.html: "methodology revised" (internal methodology revision date)
+             → docs\index.html: "revised November" (internal methodology revision date)
+  PASS  catches the methodology revision date
+    ✗ FAIL  Changes to the published record are documented
+             → Hottest July  [moved_to_closed]  was scored (BUY YES, Incorrect)
+             → Fed September  [moved_to_closed]  was scored (BUY YES, Incorrect)
+             → Next Fed rate hike  [moved_to_closed]  was scored (BUY YES, Correct)
+             → US Open Alcaraz  [moved_to_closed]  was scored (BUY YES, Incorrect)
+             → Major hurricanes  [moved_to_closed]  was scored (BUY NO, Incorrect)
+             → Isaias  [moved_to_closed]  was scored (BUY NO, Incorrect)
+             → Document each in scorecard_changes.csv (columns: contract,change,reason,source,date), then rerun.
+  PASS  catches positions silently moved from scored to closed
+    ✓ PASS  Changes to the published record are documented
+             → 6 reclassification(s) documented; 0 newly settled contract(s) added
+  PASS  accepts the same moves once each is documented with a reason and source
+    ✗ FAIL  Changes to the published record are documented
+             → Hottest July  [moved_to_closed]  was scored (BUY YES, Incorrect)
+             → Fed September  [moved_to_closed]  was scored (BUY YES, Incorrect)
+             → Next Fed rate hike  [moved_to_closed]  was scored (BUY YES, Correct)
+             → US Open Alcaraz  [moved_to_closed]  was scored (BUY YES, Incorrect)
+             → Major hurricanes  [moved_to_closed]  was scored (BUY NO, Incorrect)
+             → Isaias  [moved_to_closed]  was scored (BUY NO, Incorrect)
+             → Document each in scorecard_changes.csv (columns: contract,change,reason,source,date), then rerun.
+  PASS  rejects documentation with no reason or source
+  
+  ALL SCORECARD RULES HOLD.
+OK: scripts current; three input files saved today; 48 calls dated 2026-11-20.
+
+==================================================================
+STEP 2: verify_afg.py (before any change)
+==================================================================
+  
+  ==============================================================
+  AFG PRE-PUBLICATION INTEGRITY CHECK — 2026-11-20
+  ==============================================================
+  
+  CHECK 1: Database connectivity and schema
+    ✓ PASS  Database accessible with required tables
+           → Tables found: predictions, sqlite_sequence, call_journal, post_mortem_done
+  
+  CHECK 2: Required columns in predictions table
+    ✓ PASS  All required columns present
+           → 25 columns verified
+  
+  CHECK 3: Open positions have ticker and category
+    ✓ PASS  No open positions missing ticker or category
+           → All open positions have ticker and category
+  
+  CHECK 4: AFG and Kalshi probabilities in valid range
+    ✓ PASS  All probabilities in valid range
+           → 132 probability pairs verified
+  
+  CHECK 5: No premature resolutions (future settlement date)
+    ✓ PASS  No premature resolutions
+           → 38 resolved contracts validated
+  
+  CHECK 6: No contradictory simultaneous BUY YES + BUY NO on same ticker
+    ✓ PASS  No same-date BUY YES + BUY NO conflicts per ticker
+           → No contradictory same-day calls found
+  
+  CHECK 7: Final-call scoring compliance
+    ✓ PASS  All resolved contracts have a final scorable call
+           → 33 resolved contracts, 3 with Bayesian updates (expected)
+    ⚠ WARN  Bayesian updates noted (not a problem)
+           → 3 tickers updated mid-cycle: KXBOND-30-CAL, KXBOND-30-JAC, KXDROUGHTLEVEL-26JULLD4-OR
+  
+  CHECK 8: Publication dates not in future
+    ✓ PASS  No future-dated published calls
+           → 132 publication dates validated
+  
+  CHECK 9: AFG probability not at hard extremes (0% or 100%) on live calls
+    ✓ PASS  No open calls at hard 0% or 100% AFG probability
+           → 94 open call probabilities checked
+  
+  CHECK 10: Resolved outcomes stored as 0/1 (not YES/NO strings)
+    ✓ PASS  All resolved outcomes stored as 0 or 1
+           → 38 resolved outcomes validated as 0/1
+  
+  CHECK 11: No duplicate active resolved rows per ticker
+    ✓ PASS  No true duplicate resolved rows per ticker
+           → 3 tickers with Bayesian updates (legitimate) — no same-rec/same-date duplicates found
+  
+  CHECK 12: Independent scoring spot-check
+    ✓ PASS  Independent scoring completed without errors
+           → 25 positions scored independently — 15 Correct / 10 Incorrect / 60.0% accuracy | 7 closed before settlement (excluded)
+           ► Verified accuracy: 15/25 = 60.0%
+  
+  CHECK 13: Stored outcomes match Kalshi's settlement record
+    ✓ PASS  Every resolved outcome matches Kalshi (or a documented early resolution)
+           → 32 resolved tickers matched against Kalshi
+  
+  ==============================================================
+  RESULTS: 13/13 checks passed (13-check suite)  |  1 warning(s)
+  ==============================================================
+  
+  ✅ All checks passed. Safe to run the cycle.
+  
+
+==================================================================
+STEP 3: 04_build_report.py
+==================================================================
+  Wrote reports/AFG_Research_Report_2026-11-20.docx
+  Wrote data/final_report.xlsx
+  Wrote reports/AFG_Substack_Post_2026-11-20.md
+  Wrote reports/AFG_Twitter_Post_2026-11-20.txt
+  Wrote reports/AFG_Substack_Note_2026-11-20.txt
+
+==================================================================
+STEP 4: 045_log_predictions.py
+==================================================================
+    reprice  KXHEISMAN-27-JSMIT: BUY NO 52%/59% -> 57%/59%  (row 239)
+    reprice  KXCITRINI-28JUL01: BUY NO 9%/15% -> 10%/17%  (row 136)
+    reprice  KXAAAGASMAX-26DEC31-4.60: BUY NO 2%/6% -> 1%/5%  (row 247)
+    reprice  KXAAAGASMAX-26DEC31-4.80: BUY NO 1%/5% -> 1%/4%  (row 248)
+    reprice  KXHORMUZNORM-26MAR17-B271001: BUY NO 31%/39% -> 30%/35%  (row 241)
+    reprice  KXHORMUZNORM-26MAR17-B271101: BUY NO 33%/41% -> 32%/40%  (row 240)
+    reprice  KXHORMUZNORM-26MAR17-B271201: BUY NO 35%/46% -> 34%/41%  (row 254)
+    reprice  KXHORMUZNORM-26MAR17-B280101: BUY NO 37%/53% -> 36%/47%  (row 182)
+    reprice  KXTRUMPADMINLEAVE-26DEC31-PHEG: BUY YES 16%/14% -> 15%/13%  (row 232)
+    reprice  KXTIME-26-JAM: BUY NO 19%/22% -> 19%/23%  (row 256)
+  2026-11-20:
+    Position closed    KXNFLMVP-27-JBUR                   closed 2026-11-20
+    Position closed    KXHEISMAN-27-CCARR                 closed 2026-11-20
+    Position closed    KXCRYPTOSTRUCTURE-27JAN-28         closed 2026-11-20
+    Position closed    KXCRYPTOSTRUCTURE-27JAN-27OCT01    closed 2026-11-20
+    Position closed    KXDANCINGWITHTHESTARS-26DEC31-EFRE closed 2026-11-20
+    Position closed    KXTIME-26-ZOH                      closed 2026-11-20
+    Position closed    KXGAMEAWARDS-2026-GTA              closed 2026-11-20
+    Position closed    KXHURRICANENAMES-26DEC01ATL-KYL    closed 2026-11-20
+
+==================================================================
+STEP 4b: journal.py (reasoning at forecast time)
+==================================================================
+    journal: 48 call(s) written, 0 already on file (existing entries are never altered)
+
+==================================================================
+STEP 5: Fill ticker on newly logged rows
+==================================================================
+  ticker filled on 0 row(s)
+
+==================================================================
+STEP 6: 05_update_scorecard.py
+==================================================================
+  [2026-11-20] Checking ALL 91 open predictions against Kalshi...
+    Still open: 2027 Pro Football Champion — Los Angeles Rams (KXSB-27-LAR)
+    Still open: 2027 Pro Basketball Champion — Oklahoma City Thunder (KXNBA-27-OKC)
+    Still open: Will the Citrini scenario happen? (KXCITRINI-28JUL01)
+    Still open: Number of rate cuts in 2026 — Exactly 0 (KXRATECUTCOUNT-26DEC31-T0)
+    Still open: Hormuz traffic normal before Jan 1 2027? (KXHORMUZNORM-26MAR17-B270101)
+    Still open: U.S. confirms aliens exist before Jan 20 2029? (KXALIENS-27-29)
+    Still open: US-Iran nuclear deal before Jan 1 2028? (KXUSAIRANAGREEMENT-27-28)
+    Still open: Will the SAVE Act become law? (KXSAVEACT-27-JAN04)
+    RESOLVED: GTA VI release before 2027? -> YES (AFG: 82%, Kalshi: 89%)
+    Still open: Oscar Best Picture — The Odyssey (KXOSCARPIC-27-ODY)
+    Still open: Game Awards 2026 GOTY — Grand Theft Auto VI (KXGAMEAWARDS-2026-GTA)
+    Still open: CA 8.0+ earthquake before 2027? (KXEARTHQUAKECALIFORNIA-27)
+    Still open: Hormuz traffic normal before Jul 1 2027? (KXHORMUZNORM-26MAR17-B270701)
+    Still open: Hormuz traffic normal before Apr 1 2027? (KXHORMUZNORM-26MAR17-B270401)
+    Still open: 2027 NBA Champion — San Antonio Spurs (KXNBA-27-SAS)
+    Still open: Will 2026 be the hottest year ever? (KXGTEMP-26-P0)
+    Still open: Crypto market structure law before Jan 1 2028? (KXCRYPTOSTRUCTURE-27JAN-28)
+    Still open: Recession this year? (KXRECSSNBER-26)
+    Still open: Hormuz traffic normal before Dec 1 2026? (KXHORMUZNORM-26MAR17-B261201)
+    Still open: Leaders leaving office 2026 — Benjamin Netanyahu (KXLEADERSOUT-27JAN01-BNETISR)
+    Still open: Leaders leaving office 2026 — Christopher Luxon (KXLEADERSOUT-27JAN01-PLUXPMNZ)
+    Still open: Major Atlantic hurricanes 2026 — Above 1 (KXHURCTOTMAJ-26DEC01-T1)
+    Still open: 2027 NFL Champion — LA Rams (KXSB-27-LAR)
+    Still open: US-Iran nuclear deal before Jan 20 2029? (KXUSAIRANAGREEMENT-27-29JAN20)
+    Still open: Oscar Best Picture — The Odyssey (KXOSCARPIC-27-ODY)
+    Still open: 2027 NFL Champion — LA Rams (KXSB-27-LAR)
+    Still open: Oscar Best Picture — The Odyssey (KXOSCARPIC-27-ODY)
+    Still open: 2027 NFL Champion — LA Rams (KXSB-27-LAR)
+    Still open: US-Iran nuclear deal before Jan 20 2029? (KXUSAIRANAGREEMENT-27-29JAN20)
+    Still open: US-Iran nuclear deal before Jan 20 2029? (KXUSAIRANAGREEMENT-27-29JAN20)
+    Still open: CA 8.0+ earthquake before 2027? (KXEARTHQUAKECALIFORNIA-27)
+    Still open: Hormuz traffic normal before Jan 1 2028? (KXHORMUZNORM-26MAR17-B280101)
+    Still open: College Football Champion — Texas (KXNCAAF-27-TEX)
+    Still open: Heisman Trophy Winner — Darian Mensah (KXHEISMAN-27-DMENS)
+    Still open: US-Iran nuclear deal before Jan 20 2029? (KXUSAIRANAGREEMENT-27-29JAN20)
+    Still open: College Football Champion — Texas (KXNCAAF-27-TEX)
+    Still open: 2027 NBA Champion — OKC Thunder (KXNBA-27-OKC)
+    Still open: Heisman Trophy Winner — Trinidad Chambliss (KXHEISMAN-27-TCHAM)
+    Still open: US-Iran nuclear deal before Jan 20 2029? (KXUSAIRANAGREEMENT-27-29JAN20)
+    Still open: Hormuz traffic normal before Jul 1 2027? (KXHORMUZNORM-26MAR17-B270701)
+    Still open: Dancing with the Stars S35 Winner — Ezra Frech (KXDANCINGWITHTHESTARS-26DEC31-EFRE)
+    Still open: Will 2026 be the hottest year ever? (KXGTEMP-26-P0)
+    Still open: Hurricane landfall in Hawaii in 2026? (KXHURPATHHAWAII-26DEC)
+    Still open: NBA Champion — OKC Thunder (KXNBA-27-OKC)
+    Still open: Heisman Trophy Winner — Jeremiah Smith (KXHEISMAN-27-JSMIT)
+    Still open: Oscar Best Picture — The Odyssey (KXOSCARPIC-27-ODY)
+    Still open: College Football Champion — Georgia (KXNCAAF-27-UGA)
+    Still open: CA 8.0+ earthquake before 2027? (KXEARTHQUAKECALIFORNIA-27)
+    Still open: CA 8.0+ earthquake before 2027? (KXEARTHQUAKECALIFORNIA-27)
+    Still open: US-Iran nuclear deal before Jan 20 2029? (KXUSAIRANAGREEMENT-27-29JAN20)
+    Still open: 2027 NFL Champion — San Francisco 49ers (KXSB-27-SF)
+    Still open: NFL MVP — Brock Purdy (KXNFLMVP-27-BPUR)
+    Still open: Clarity Act becomes law before Jan 1 2028? (KXCRYPTOSTRUCTURE-27JAN-28)
+    Still open: Will 2026 be the hottest year on record? (NASA GISS) (KXGTEMP-26-P0)
+    Still open: Game Awards 2026 GOTY — Grand Theft Auto VI (KXGAMEAWARDS-2026-GTA)
+    Still open: 2027 NFL Champion — San Francisco 49ers (KXSB-27-SF)
+    Still open: NFL MVP — Brock Purdy (KXNFLMVP-27-BPUR)
+    Still open: Clarity Act becomes law before Jan 1 2028? (KXCRYPTOSTRUCTURE-27JAN-28)
+    Still open: CA 8.0+ earthquake before 2027? (KXEARTHQUAKECALIFORNIA-27)
+    Still open: Oscar Best Picture — The Odyssey (KXOSCARPIC-27-ODY)
+    Still open: NFL MVP — Joe Burrow (KXNFLMVP-27-JBUR)
+    Still open: Fed decision in December — Hike 25bps (KXFEDDECISION-26DEC-H25)
+    Still open: Clarity Act becomes law before Jan 1 2028? (KXCRYPTOSTRUCTURE-27JAN-28)
+    Still open: NFL MVP — Josh Allen (KXNFLMVP-27-JALL)
+    Still open: Heisman Trophy Winner — Jeremiah Smith (KXHEISMAN-27-JSMIT)
+    Still open: US-Iran nuclear deal before Jan 20 2029? (KXUSAIRANAGREEMENT-27-29JAN20)
+    Still open: Heisman Trophy Winner — CJ Carr (KXHEISMAN-27-CCARR)
+    Still open: Trump administration departures 2026 — Pete Hegseth (KXTRUMPADMINLEAVE-26DEC31-PHEG)
+    Still open: Trump administration departures 2026 — Will Scharf (KXTRUMPADMINLEAVE-26DEC31-WSCH)
+    Still open: Dancing with the Stars S35 Winner — Ezra Frech (KXDANCINGWITHTHESTARS-26DEC31-EFRE)
+    Still open: NFL MVP — Joe Burrow (KXNFLMVP-27-JBUR)
+    Still open: Heisman Trophy Winner — Darian Mensah (KXHEISMAN-27-DMENS)
+    Still open: Heisman Trophy — Jeremiah Smith (KXHEISMAN-27-JSMIT)
+    Still open: Hormuz normal before Nov 1 2027? (KXHORMUZNORM-26MAR17-B271101)
+    Still open: Hormuz normal before Oct 1 2027? (KXHORMUZNORM-26MAR17-B271001)
+    Still open: Press Secretary — Ben Ferguson (KXNEXTPRESSECPERM-29JAN20-BFER)
+    Still open: Oscar — You Can See Everything (KXOSCARPIC-27-YOU)
+    Still open: 2027 NFL Champion — Buffalo Bills (KXSB-27-BUF)
+    Still open: College Football Champion — Georgia (KXNCAAF-27-UGA)
+    Still open: Fed decision in December — Hike >25bps (KXFEDDECISION-26DEC-H26)
+    Still open: US gas price above $4.60 in 2026? (KXAAAGASMAX-26DEC31-4.60)
+    Still open: US gas price above $4.80 in 2026? (KXAAAGASMAX-26DEC31-4.80)
+    Still open: Trump administration departures 2026 — Howard Lutnick (KXTRUMPADMINLEAVE-26DEC31-HLUT)
+    Still open: Next White House Press Secretary — Scott Jennings (KXNEXTPRESSECPERM-29JAN20-SJEN)
+    Still open: Hormuz normal before Sep 1 2027? (KXHORMUZNORM-26MAR17-B270901)
+    Still open: Time Person of the Year 2026 — Zohran Mamdani (KXTIME-26-ZOH)
+    Still open: Fed funds upper bound above 4.25% at end of 2027 (KXFEDFUNDSYEAR-28JAN01-T4.25)
+    Still open: Hormuz normal before Dec 1 2027? (KXHORMUZNORM-26MAR17-B271201)
+    Still open: Clarity Act becomes law before Oct 1 2027? (KXCRYPTOSTRUCTURE-27JAN-27OCT01)
+    Still open: Time Person of the Year 2026 — James Talarico (KXTIME-26-JAM)
+    Still open: Atlantic hurricane 2026 — Kyle (KXHURRICANENAMES-26DEC01ATL-KYL)
+  [2026-11-20] Done. 1 of 91 checked, 1 newly resolved.
+  Scorecard written to reports/scorecard.html (39 resolved calls)
+
+==================================================================
+STEP 6b: post_mortem.py (review sheet for newly settled positions)
+==================================================================
+    post-mortems: 1 position(s) written to reports\post_mortems\post_mortem_2026-11-20.md
+
+==================================================================
+STEP 7: verify_afg.py (after today's changes)
+==================================================================
+  
+  ==============================================================
+  AFG PRE-PUBLICATION INTEGRITY CHECK — 2026-11-20
+  ==============================================================
+  
+  CHECK 1: Database connectivity and schema
+    ✓ PASS  Database accessible with required tables
+           → Tables found: predictions, sqlite_sequence, call_journal, post_mortem_done
+  
+  CHECK 2: Required columns in predictions table
+    ✓ PASS  All required columns present
+           → 25 columns verified
+  
+  CHECK 3: Open positions have ticker and category
+    ✓ PASS  No open positions missing ticker or category
+           → All open positions have ticker and category
+  
+  CHECK 4: AFG and Kalshi probabilities in valid range
+    ✓ PASS  All probabilities in valid range
+           → 132 probability pairs verified
+  
+  CHECK 5: No premature resolutions (future settlement date)
+    ✓ PASS  No premature resolutions
+           → 39 resolved contracts validated
+  
+  CHECK 6: No contradictory simultaneous BUY YES + BUY NO on same ticker
+    ✓ PASS  No same-date BUY YES + BUY NO conflicts per ticker
+           → No contradictory same-day calls found
+  
+  CHECK 7: Final-call scoring compliance
+    ✓ PASS  All resolved contracts have a final scorable call
+           → 34 resolved contracts, 3 with Bayesian updates (expected)
+    ⚠ WARN  Bayesian updates noted (not a problem)
+           → 3 tickers updated mid-cycle: KXBOND-30-CAL, KXBOND-30-JAC, KXDROUGHTLEVEL-26JULLD4-OR
+  
+  CHECK 8: Publication dates not in future
+    ✓ PASS  No future-dated published calls
+           → 132 publication dates validated
+  
+  CHECK 9: AFG probability not at hard extremes (0% or 100%) on live calls
+    ✓ PASS  No open calls at hard 0% or 100% AFG probability
+           → 93 open call probabilities checked
+  
+  CHECK 10: Resolved outcomes stored as 0/1 (not YES/NO strings)
+    ✓ PASS  All resolved outcomes stored as 0 or 1
+           → 39 resolved outcomes validated as 0/1
+  
+  CHECK 11: No duplicate active resolved rows per ticker
+    ✓ PASS  No true duplicate resolved rows per ticker
+           → 3 tickers with Bayesian updates (legitimate) — no same-rec/same-date duplicates found
+  
+  CHECK 12: Independent scoring spot-check
+    ✓ PASS  Independent scoring completed without errors
+           → 25 positions scored independently — 15 Correct / 10 Incorrect / 60.0% accuracy | 8 closed before settlement (excluded)
+           ► Verified accuracy: 15/25 = 60.0%
+  
+  CHECK 13: Stored outcomes match Kalshi's settlement record
+    ✓ PASS  Every resolved outcome matches Kalshi (or a documented early resolution)
+           → 33 resolved tickers matched against Kalshi
+  
+  ==============================================================
+  RESULTS: 13/13 checks passed (13-check suite)  |  1 warning(s)
+  ==============================================================
+  
+  ✅ All checks passed. Safe to run the cycle.
+  
+
+  Check 12 accuracy: 15/25 = 60.0%
+
+==================================================================
+STEP 8: 06_build_scorecard.py
+==================================================================
+  Checking stored outcomes against Kalshi's settlement records...
+  TICKER                                     STORED  KALSHI                 CHECK
+  --------------------------------------------------------------------------------
+  FEDHIKE-26DEC31                            1       settled yes            ok
+  GTA6-26DEC31                               1       settled yes            ok
+  KXATP-26USO-ALC                            0       settled no (archive)   ok
+  KXBIGBROTHER-26DEC31-DEE                   0       settled no             ok
+  KXBIGBROTHER-26DEC31-DRE                   0       settled no             ok
+  KXBIGBROTHER-26DEC31-RIC                   1       settled yes            ok
+  KXBIGBROTHER-26DEC31-YAS                   0       settled no             ok
+  KXBLANCHEJUDICIARY-27-26OCT01              1       settled yes (archive)  ok
+  KXBOND-30-CAL                              0       settled no             ok
+  KXBOND-30-JAC                              0       settled no             ok
+  KXBOND-30-JACK                             0       settled no             ok
+  KXBOND-30-JOS                              0       settled no             ok
+  KXBOND-30-ROB                              1       settled yes            ok
+  KXDROUGHTLEVEL-26JULLD4-OR                 0       settled no (archive)   ok
+  KXEARTHQUAKEM-26AUG-78                     1       settled yes (archive)  ok
+  KXF1-26-KA                                 1       settled yes            ok
+  KXFEDDECISION-26JUL-H0                     1       settled yes (archive)  ok
+  KXFEDDECISION-26SEP-H0                     0       settled no             ok
+  KXFIRSTHURRICANE-26DEC01ATL-FAY            0       settled no             ok
+  KXFIRSTHURRICANE-26DEC01ATL-GON            0       settled no             ok
+  KXFIRSTHURRICANE-26DEC01ATL-HAN            0       settled no             ok
+  KXFIRSTHURRICANE-26DEC01ATL-ISA            1       settled yes            ok
+  KXHMONTH-26JUL                             0       settled no (archive)   ok
+  KXHURCTOTMAJ-26DEC01-T0                    1       settled yes            ok
+  KXMLB-26-LAD                               0       settled no             ok
+  KXNEXTTEAMNBA-26LJAM-CLE                   0       settled no (archive)   ok
+  KXNEXTTEAMNBA-26LJAM-MIA                   0       settled no (archive)   ok
+  KXPGATOUR-3MO26-SSCH                       0       settled no (archive)   ok
+  KXPGATOUR-BMC26-SSCH                       0       settled no (archive)   ok
+  KXPGATOUR-FESJC26-SSCH                     1       settled yes (archive)  ok
+  KXPGATOUR-TOC26-SSCH                       1       settled yes (archive)  ok
+  KXRT-SPI-91                                0       settled no (archive)   ok
+  KXTRUMPADMINLEAVE-26DEC31-SWIL             1       settled yes            ok
+  --------------------------------------------------------------------------------
+  
+  All 33 resolved outcomes match Kalshi or a documented early resolution.
+    WARNING: KXBOND-30-JAC has 1 published call(s) with no publication date; treated as the latest call. Run fix_null_published_dates.py to restore the date.
+    WARNING: KXBOND-30-ROB has 1 published call(s) with no publication date; treated as the latest call. Run fix_null_published_dates.py to restore the date.
+  
+  ============================================================
+  AFG SCORECARD — FINAL-CALL ONLY — November 20, 2026
+  ============================================================
+  Scored positions : 25
+  Correct          : 15
+  Incorrect        : 10
+  Accuracy         : 60.0%
+  AFG Brier        : 0.218
+  Market Brier     : 0.198
+  Excluded (closed): 8
+  
+    Closed before settlement (excluded from the record, shown in the disclosure table):
+      KXHMONTH-26JUL                         BUY YES  closed 2026-08-12  outcome NO  would have been ✗ Incorrect
+        reason on file: AFG published NO TRADE on 2026-08-12
+      KXFEDDECISION-26SEP-H0                 BUY YES  closed 2026-08-31  outcome NO  would have been ✗ Incorrect
+        reason on file: AFG published NO TRADE on 2026-08-31
+      KXATP-26USO-ALC                        BUY YES  closed 2026-09-02  outcome NO  would have been ✗ Incorrect
+        reason on file: AFG published NO TRADE on 2026-09-02
+      FEDHIKE-26DEC31                        BUY YES  closed 2026-09-11  outcome YES  would have been ✓ Correct
+        reason on file: AFG published NO TRADE on 2026-09-11
+      GTA6-26DEC31                           BUY NO   closed 2026-10-05  outcome YES  would have been ✗ Incorrect
+        reason on file: AFG published NO TRADE on 2026-10-05
+      KXHURCTOTMAJ-26DEC01-T0                BUY NO   closed 2026-10-07  outcome YES  would have been ✗ Incorrect
+        reason on file: Withdrawn: Isaias forecast to rapidly intensify; thesis no longer applies
+      KXFIRSTHURRICANE-26DEC01ATL-ISA        BUY NO   closed 2026-10-07  outcome YES  would have been ✗ Incorrect
+        reason on file: AFG published NO TRADE on 2026-10-07
+      KXBOND-30-JOS                          BUY NO   closed 2026-11-11  outcome NO  would have been ✓ Correct
+        reason on file: AFG published NO TRADE on 2026-11-11
+  
+  HTML scorecard  : docs\index.html
+  Word scorecard saved: reports\scorecards\AFG_Scorecard_2026-11-20.docx
+  Resolution post: reports\scorecards\AFG_Resolution_Post_2026-11-20.txt
+  
+  Done. Git push to publish: git add -A && git commit -m "scorecard 2026-11-20" && git push
+
+==================================================================
+STEP 9: Accuracy match
+==================================================================
+  Check 12: 60.0%     06_build_scorecard.py: 60.0%
+  MATCH
+
+==================================================================
+STEP 9b: audit_published.py (independent audit of the page about to go public)
+==================================================================
+  ==================================================================
+  AFG PUBLICATION AUDIT -- 2026-11-20
+  ==================================================================
+  
+    ✓ PASS  Headline numbers equal an independent recomputation
+             → 15/25 = 60.0%  |  AFG Brier 0.218  |  Market Brier 0.198  |  8 closed
+    ✓ PASS  Every row on the page matches the database
+             → 25 scored rows and 8 closed rows checked
+    ✓ PASS  Every settled contract is either scored or disclosed (nothing dropped)
+             → 33 settled = 25 scored + 8 closed
+    ✓ PASS  Closures agree with AFG's own published calls
+             → 5 settled contract(s) have published-call history (the rest settled before it began)
+    ✓ PASS  No proprietary wording in public material
+             → 5 public file(s) scanned
+    ⚠ WARN  Paid report contains screening wording
+             → reports/AFG_Research_Report_2026-11-20.docx: ['categories × 5']
+    ✓ PASS  Changes to the published record are documented
+             → 0 reclassification(s) documented; 1 newly settled contract(s) added
+  
+  ==================================================================
+  ALL TESTS PASSED. Safe to publish.
+  ==================================================================
+
+==================================================================
+STEP 10: Publish the scorecard
+==================================================================
+  All checks passed. Verified accuracy 60.0%.
+  answer: 'PUSH'
+  warning: in the working copy of 'data/approved_narrative.md', LF will be replaced by CRLF the next time Git touches it
+  ==================================================================
+  AFG PUBLICATION AUDIT -- 2026-11-20
+  ==================================================================
+  
+    ✓ PASS  Headline numbers equal an independent recomputation
+             → 15/25 = 60.0%  |  AFG Brier 0.218  |  Market Brier 0.198  |  8 closed
+    ✓ PASS  Every row on the page matches the database
+             → 25 scored rows and 8 closed rows checked
+    ✓ PASS  Every settled contract is either scored or disclosed (nothing dropped)
+             → 33 settled = 25 scored + 8 closed
+    ✓ PASS  Closures agree with AFG's own published calls
+             → 5 settled contract(s) have published-call history (the rest settled before it began)
+    ✓ PASS  No proprietary wording in public material
+             → 5 public file(s) scanned
+    ⚠ WARN  Paid report contains screening wording
+             → reports/AFG_Research_Report_2026-11-20.docx: ['categories × 5']
+    ✓ PASS  Changes to the published record are documented
+             → 0 reclassification(s) documented; 1 newly settled contract(s) added
+  
+  ==================================================================
+  ALL TESTS PASSED. Safe to publish.
+  ==================================================================
+  [main e57191a] cycle update 2026-11-20
+   17 files changed, 830 insertions(+), 120 deletions(-)
+   create mode 100644 logs/run_cycle_2026-11-20.log
+   create mode 100644 reports/AFG_Research_Report_2026-11-20.docx
+   create mode 100644 reports/AFG_Substack_Note_2026-11-20.txt
+   create mode 100644 reports/AFG_Substack_Post_2026-11-20.md
+   create mode 100644 reports/AFG_Twitter_Post_2026-11-20.txt
+   create mode 100644 reports/post_mortems/post_mortem_2026-11-20.md
+   create mode 100644 reports/scorecards/AFG_Resolution_Post_2026-11-20.txt
+   create mode 100644 reports/scorecards/AFG_Scorecard_2026-11-20.docx
+  To https://github.com/scowlfaceq02/afg-scorecard.git
+     40e0e7a..e57191a  main -> main
+  Pushed. Open https://scowlfaceq02.github.io/afg-scorecard/ in a minute and confirm it shows 60.0%.
+
+==================================================================
+NOW PUBLISH (in this order)
+==================================================================
+  1. Substack:      reports\AFG_Substack_Post_2026-11-20.md
+  2. X:             reports\AFG_Twitter_Post_2026-11-20.txt
+  3. Substack Note: reports\AFG_Substack_Note_2026-11-20.txt  (add the link to today's post)
+  4. Resolution post: reports\scorecards\AFG_Resolution_Post_2026-11-20.txt  (attach a scorecard screenshot)
+
+  REVIEW (not published): reports\post_mortems\post_mortem_2026-11-20.md
+  Answer the five questions for each position before the next cycle.
+
+Log saved: logs\run_cycle_2026-11-20.log
