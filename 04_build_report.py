@@ -14,11 +14,18 @@ Run:
     python 04_build_report.py
 """
 
+import io
 import os
 import re
 import sys
 from datetime import date
 
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import matplotlib.ticker
+import numpy as np
 import pandas as pd
 from docx import Document
 from docx.shared import Pt, Inches, RGBColor, Twips
@@ -61,6 +68,17 @@ TABLE_LEFT_SHIFT  = 0   # tables sized to fit text column; no indent needed
 
 
 
+# ---------- date style ----------
+
+def afg_date(d, with_year=False):
+    """AFG house date style (adopted October 31st, 2026): 'November 2nd',
+    or 'November 2nd, 2026' with the year. Never '2 November'."""
+    n = d.day
+    suffix = "th" if 11 <= n % 100 <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    s = f"{d.strftime('%B')} {n}{suffix}"
+    return f"{s}, {d.year}" if with_year else s
+
+
 # ---------- input loading & validation ----------
 
 def require_approved_files():
@@ -83,7 +101,13 @@ def load_predictions():
         raise ValueError(f"{PREDICTIONS_PATH} is missing required columns: {missing_cols}")
 
     df["edge_score"] = df["afg_probability"] - df["kalshi_price"]
-    df = df.sort_values("edge_score", key=lambda s: s.abs(), ascending=False).reset_index(drop=True)
+    # Rank by absolute edge; ties broken by conviction tier (HIGH > MEDIUM >
+    # SPECULATIVE), then by CSV order. mergesort keeps the order stable.
+    tier = {"HIGH": 0, "MEDIUM": 1, "SPECULATIVE": 2}
+    df["_abs_edge"] = df["edge_score"].abs().round(4)
+    df["_tier"] = df["conviction"].str.upper().map(tier).fillna(3)
+    df = (df.sort_values(["_abs_edge", "_tier"], ascending=[False, True], kind="mergesort")
+            .drop(columns=["_abs_edge", "_tier"]).reset_index(drop=True))
     return df
 
 
@@ -386,6 +410,404 @@ def add_dashboard_table(doc, stats):
     return table
 
 
+# ---------- signature charts ----------
+
+# AFG brand palette (hex strings for matplotlib)
+_NAVY  = "#17365D"
+_BLUE  = "#365F91"
+_ACCENT = "#4F81BD"
+_GREEN = "#1F6F3D"
+_RED   = "#A6231F"
+_LGRAY = "#F2F2F2"
+_MGRAY = "#A6A6A6"
+_TEXT  = "#1A1A1A"
+
+
+def _chart_png(fig) -> bytes:
+    """Render a matplotlib figure to PNG bytes and close it."""
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=150, bbox_inches="tight")
+    buf.seek(0)
+    data = buf.read()
+    plt.close(fig)
+    return data
+
+
+def _insert_chart_png(doc, png_bytes: bytes, width_inches: float = 6.5,
+                      caption: str = ""):
+    """Embed a PNG image into the docx, optionally with a caption."""
+    buf = io.BytesIO(png_bytes)
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = p.add_run()
+    run.add_picture(buf, width=Inches(width_inches))
+    if caption:
+        cap = doc.add_paragraph(caption)
+        cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run_c = cap.runs[0] if cap.runs else cap.add_run(caption)
+        style_run(run_c, size=8.5, italic=True, color=GRAY)
+
+
+def build_probability_advantage_chart(df: pd.DataFrame) -> bytes:
+    """
+    Chart 1 — Where AFG Sees the Edge
+    Horizontal grouped bar chart: AFG probability vs. Kalshi probability
+    for all BUY positions, sorted by absolute edge descending.
+    """
+    buys = df[df["recommendation"].str.upper().str.contains("BUY", na=False)].copy()
+    buys["abs_edge"] = (buys["afg_probability"] - buys["kalshi_price"]).abs()
+    buys = buys.sort_values("abs_edge", ascending=True)  # ascending so top = top of chart
+
+    if buys.empty:
+        # Return a simple "no actionable calls" placeholder
+        fig, ax = plt.subplots(figsize=(7, 1.5))
+        ax.text(0.5, 0.5, "No actionable positions this cycle",
+                ha="center", va="center", transform=ax.transAxes,
+                color=_MGRAY, fontsize=10)
+        ax.axis("off")
+        return _chart_png(fig)
+
+    labels = buys["market"].tolist()
+    # CSV stores probabilities as decimals (0.0–1.0); convert to percentage
+    kalshi_vals = (buys["kalshi_price"] * 100).tolist()
+    afg_vals    = (buys["afg_probability"] * 100).tolist()
+    n = len(labels)
+
+    bar_h = 0.32
+    y = np.arange(n)
+    fig_h = max(2.5, n * 0.55 + 1.0)
+    fig, ax = plt.subplots(figsize=(7.5, fig_h))
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("white")
+
+    bars_k = ax.barh(y - bar_h / 2, kalshi_vals, bar_h, color=_ACCENT,
+                     label="Kalshi", zorder=3)
+    bars_a = ax.barh(y + bar_h / 2, afg_vals, bar_h, color=_NAVY,
+                     label="AFG Estimate", zorder=3)
+
+    # Edge labels on the AFG bars
+    for bar, k, a in zip(bars_a, kalshi_vals, afg_vals):
+        edge = a - k
+        sign = "+" if edge >= 0 else ""
+        ax.text(bar.get_width() + 0.8, bar.get_y() + bar.get_height() / 2,
+                f"{sign}{edge:.0f}pp",
+                va="center", ha="left", fontsize=7.5, color=_GREEN if edge > 0 else _RED,
+                fontweight="bold", zorder=4)
+
+    ax.set_yticks(y)
+    ax.set_yticklabels(labels, fontsize=8.5, color=_TEXT)
+    ax.set_xlabel("Probability (%)", fontsize=8.5, color=_MGRAY)
+    ax.set_xlim(0, min(100, max(max(kalshi_vals + afg_vals) + 14, 30)))
+    ax.tick_params(axis="x", labelsize=8, colors=_MGRAY)
+    ax.tick_params(axis="y", length=0)
+    ax.xaxis.set_minor_locator(matplotlib.ticker.AutoMinorLocator())
+    ax.grid(axis="x", color=_LGRAY, linewidth=0.8, zorder=0)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    ax.spines["bottom"].set_color(_MGRAY)
+
+    legend = ax.legend(fontsize=8, frameon=False, loc="lower right",
+                       ncol=2, labelcolor=_TEXT)
+    ax.set_title("Where AFG Sees the Edge", fontsize=11, fontweight="bold",
+                 color=_NAVY, pad=10, loc="left")
+
+    fig.tight_layout(pad=0.8)
+    return _chart_png(fig)
+
+
+def build_movement_tracker_chart(df: pd.DataFrame,
+                                  history_path: str = "data/price_history.csv") -> bytes | None:
+    """
+    Chart 3 — The Market's Changing Expectations
+    Line chart: Kalshi implied probability over time for each tracked market.
+    AFG's current estimate shown as a dashed horizontal reference line per series.
+
+    Returns None (no chart) if fewer than 2 dated snapshots exist in the log,
+    so the first cycle after log_prices.py is seeded produces nothing — the
+    chart becomes live on the second cycle (3 days later).
+    """
+    import os
+    if not os.path.exists(history_path):
+        return None
+
+    hist = pd.read_csv(history_path, parse_dates=["log_date"])
+    if hist.empty:
+        return None
+
+    # Only show markets that have at least 2 distinct dates in the log
+    counts = hist.groupby("kalshi_ticker")["log_date"].nunique()
+    tracked = counts[counts >= 2].index.tolist()
+    if not tracked:
+        return None  # not enough history yet — skip the chart entirely
+
+    # Only plot the current cycle's active BUY positions (same set as Charts 1 and 3)
+    current_tickers = df.loc[df["recommendation"].str.upper().str.contains("BUY", na=False),
+                             "kalshi_ticker"].tolist()
+    plot_tickers = [t for t in tracked if t in current_tickers]
+    if not plot_tickers:
+        return None
+
+    # Build a label map from current cycle (market name is most up-to-date)
+    label_map = dict(zip(df["kalshi_ticker"], df["market"]))
+    afg_map   = dict(zip(df["kalshi_ticker"], df["afg_probability"] * 100))
+
+    # Limit to 12 series max (the dataviz non-negotiable); pick by largest
+    # absolute current edge to keep the most interesting markets
+    df_edge = df.copy()
+    df_edge["abs_edge"] = (df_edge["afg_probability"] - df_edge["kalshi_price"]).abs()
+    df_edge = df_edge[df_edge["kalshi_ticker"].isin(plot_tickers)]
+    df_edge = df_edge.sort_values("abs_edge", ascending=False)
+    plot_tickers = df_edge["kalshi_ticker"].head(12).tolist()
+
+    hist_subset = hist[hist["kalshi_ticker"].isin(plot_tickers)].copy()
+    hist_subset["kalshi_price_pct"] = hist_subset["kalshi_price"].astype(float) * 100
+
+    # Color palette: categorical order in fixed AFG brand hues
+    palette = [_NAVY, _ACCENT, _RED, _GREEN, "#7F6084", "#C05A2A",
+               "#1B7A8F", "#A89B2E", "#6C3483", "#2E8B57", "#C0392B", "#1A5276"]
+
+    n_series = len(plot_tickers)
+    fig_h = max(4.5, 3.5 + n_series * 0.15)
+    fig, ax = plt.subplots(figsize=(7.5, fig_h))
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("white")
+
+    used_colors = []
+    for i, ticker in enumerate(plot_tickers):
+        series = hist_subset[hist_subset["kalshi_ticker"] == ticker].sort_values("log_date")
+        color = palette[i % len(palette)]
+        used_colors.append(color)
+        label = label_map.get(ticker, ticker)
+        short = label if len(label) <= 28 else label[:26] + "…"
+
+        ax.plot(series["log_date"], series["kalshi_price_pct"],
+                color=color, linewidth=1.8, marker="o", markersize=5,
+                zorder=3, label=short)
+
+        # AFG reference line for this ticker (dashed, same color, lighter)
+        afg_val = afg_map.get(ticker)
+        if afg_val is not None:
+            x_start = series["log_date"].min()
+            x_end   = series["log_date"].max()
+            ax.plot([x_start, x_end], [afg_val, afg_val],
+                    color=color, linewidth=1.0, linestyle=":", alpha=0.55, zorder=2)
+
+    ax.set_xlabel("Report Date", fontsize=8.5, color=_MGRAY)
+    ax.set_ylabel("Kalshi Implied Probability (%)", fontsize=8.5, color=_MGRAY)
+    ax.tick_params(labelsize=8, colors=_MGRAY)
+    ax.tick_params(axis="x", rotation=25)
+    ax.grid(axis="y", color=_LGRAY, linewidth=0.8, zorder=0)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["bottom"].set_color(_MGRAY)
+    ax.spines["left"].set_color(_MGRAY)
+
+    # Format x-axis dates compactly
+    import matplotlib.dates as mdates
+    ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(
+        lambda v, _pos: afg_date(mdates.num2date(v).date())))
+    # One tick per logged cycle (thinned to at most 8 labels)
+    _cycle_dates = sorted(hist_subset["log_date"].unique())
+    _step = max(1, -(-len(_cycle_dates) // 8))
+    ax.xaxis.set_major_locator(matplotlib.ticker.FixedLocator(
+        [mdates.date2num(pd.Timestamp(d).to_pydatetime()) for d in _cycle_dates[::_step]]))
+
+    # Legend outside plot area to avoid crowding
+    legend = ax.legend(fontsize=7, frameon=False, loc="upper left",
+                       bbox_to_anchor=(1.01, 1.0), borderaxespad=0,
+                       labelcolor=_TEXT, ncol=1)
+
+    # Dotted-line note in subtitle
+    ax.set_title("The Market's Changing Expectations\n"
+                 "Solid = Kalshi price · Dotted = AFG estimate",
+                 fontsize=10, fontweight="bold", color=_NAVY, pad=10, loc="left",
+                 linespacing=1.6)
+
+    fig.tight_layout(pad=0.8)
+    return _chart_png(fig)
+
+
+def build_mispricing_matrix_chart(df: pd.DataFrame) -> bytes:
+    """
+    Chart 2 — Mapping the Market's Blind Spots
+    Scatter plot: Kalshi probability (x) vs. AFG probability (y).
+    The 45° diagonal = fair value. Points above = AFG more bullish (BUY YES).
+    Points below = AFG more bearish (BUY NO). Color-coded by recommendation.
+    """
+    plot_df = df[df["recommendation"].str.upper().str.contains("BUY", na=False)].copy()
+    if plot_df.empty:
+        fig, ax = plt.subplots(figsize=(6, 6))
+        ax.text(0.5, 0.5, "No actionable positions this cycle",
+                ha="center", va="center", transform=ax.transAxes,
+                color=_MGRAY, fontsize=10)
+        ax.axis("off")
+        return _chart_png(fig)
+
+    rec_upper = plot_df["recommendation"].str.upper()
+    colors = [_GREEN if "YES" in r else _RED for r in rec_upper]
+
+    # CSV stores probabilities as decimals (0.0–1.0); convert to percentage
+    x = (plot_df["kalshi_price"] * 100).tolist()
+    y_vals = (plot_df["afg_probability"] * 100).tolist()
+    labels = plot_df["market"].tolist()
+
+    fig, ax = plt.subplots(figsize=(6.5, 6.5))
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("white")
+
+    # Diagonal fair-value line — cap at 100 (probabilities in %)
+    lim_max = min(100, max(max(x + y_vals) + 12, 30))
+    ax.plot([0, lim_max], [0, lim_max], color=_MGRAY, linewidth=1.2,
+            linestyle="--", zorder=1, label="Fair Value (AFG = Kalshi)")
+
+    # Shading: above diagonal = AFG more bullish; below = AFG more bearish
+    ax.fill_between([0, lim_max], [0, lim_max], [lim_max, lim_max],
+                    color=_GREEN, alpha=0.04, zorder=0)
+    ax.fill_between([0, lim_max], [0, 0], [0, lim_max],
+                    color=_RED, alpha=0.04, zorder=0)
+
+    sc = ax.scatter(x, y_vals, c=colors, s=90, zorder=3,
+                    edgecolors="white", linewidths=0.8)
+
+    # Short labels with the edge appended, e.g. "Callum Turner · Bond  −15".
+    # An optional chart_label column in approved_predictions.csv overrides
+    # the automatic label for any row.
+    edges = [a - k for a, k in zip(y_vals, x)]
+    overrides = (plot_df["chart_label"].fillna("").astype(str).tolist()
+                 if "chart_label" in plot_df.columns else [""] * len(labels))
+    texts = []
+    for lbl, ov, e in zip(labels, overrides, edges):
+        base = ov.strip() or _chart_label(lbl)
+        texts.append(f"{base}  {'+' if e > 0 else '−'}{abs(e):.0f}")
+
+    ax.set_xlim(0, lim_max)
+    ax.set_ylim(0, lim_max)
+    ax.set_xlabel("Kalshi Implied Probability (%)", fontsize=9, color=_MGRAY)
+    ax.set_ylabel("AFG Probability Estimate (%)", fontsize=9, color=_MGRAY)
+    ax.tick_params(labelsize=8, colors=_MGRAY)
+    ax.grid(color=_LGRAY, linewidth=0.8, zorder=0)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["bottom"].set_color(_MGRAY)
+    ax.spines["left"].set_color(_MGRAY)
+
+    yes_patch = mpatches.Patch(color=_GREEN, label="BUY YES (AFG more bullish)")
+    no_patch  = mpatches.Patch(color=_RED,   label="BUY NO  (AFG more bearish)")
+    fair_line = plt.Line2D([0], [0], color=_MGRAY, linewidth=1.2,
+                           linestyle="--", label="Fair Value")
+    # Legend sits below the plot so it never competes with point labels
+    ax.legend(handles=[yes_patch, no_patch, fair_line], fontsize=7.5,
+              frameon=False, loc="upper center", bbox_to_anchor=(0.5, -0.09),
+              ncol=3, labelcolor=_TEXT)
+
+    ax.set_title("Mapping the Market's Blind Spots", fontsize=11,
+                 fontweight="bold", color=_NAVY, pad=10, loc="left")
+    ax.text(0, 1.005, "Label = market and AFG edge in points. Distance from the dashed line = size of the disagreement.",
+            transform=ax.transAxes, fontsize=7, color=_MGRAY, va="bottom")
+
+    fig.tight_layout(pad=0.8)
+    # Place labels last, once the axes geometry is final
+    _place_point_labels(fig, ax, x, y_vals, texts,
+                        priority=[abs(e) for e in edges])
+    return _chart_png(fig)
+
+
+_SERIES_CONTEXT = [
+    ("Next James Bond", "Bond"), ("Heisman", "Heisman"), ("NFL MVP", "MVP"),
+    ("Game Awards", "GOTY"), ("Oscar Best Picture", "Best Picture"),
+    ("NFL Champion", "Super Bowl"), ("NBA Champion", "NBA title"),
+    ("College Football Champion", "CFP title"),
+    ("Trump administration departures", "leaves in 2026"),
+    ("Dancing with the Stars", "DWTS"),
+]
+_GENERIC_TAILS = ("hike", "cut", "hold", "exactly", "more than", "above",
+                  "below", "yes", "no ")
+
+
+def _chart_label(market: str) -> str:
+    """Short, house-style label for a chart point, wrapped to two lines max."""
+    import textwrap
+    m = market.strip().rstrip("?").strip()
+    m = re.sub(r"before Jan 1 (\d{4})", r"before \1", m)        # house date style
+    m = re.sub(r"^Will (the )?(.*?)( happen)?$", r"\2", m)
+    if "—" in m:
+        head, tail = [s.strip() for s in m.split("—", 1)]
+        context = next((c for key, c in _SERIES_CONTEXT if key in head), None)
+        if context and not tail.lower().startswith(_GENERIC_TAILS):
+            m = f"{tail} · {context}"
+        else:
+            m = f"{head}: {tail}"
+    m = m[:1].upper() + m[1:]
+    lines = textwrap.wrap(m, width=26)
+    if len(lines) > 2:
+        lines = [lines[0], (lines[1][:24].rstrip() + "…")]
+    return "\n".join(lines)
+
+
+def _place_point_labels(fig, ax, xs, ys, texts, priority):
+    """
+    Deterministic, dependency-free label placement. Labels are placed in
+    order of priority (largest edge first). For each, candidate positions
+    around the point are tried at increasing distance; the first one that
+    stays inside the plot and clears every point and every placed label wins.
+    Labels set away from their point get a thin leader line.
+    """
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    px = fig.dpi / 72.0
+    ax_box = ax.get_window_extent(renderer)
+    pts = ax.transData.transform(list(zip(xs, ys)))
+    r = 6 * px                                   # marker radius plus margin
+    point_boxes = [(p[0] - r, p[1] - r, p[0] + r, p[1] + r) for p in pts]
+
+    # (dx, dy) unit directions with matching text alignment
+    dirs = [(1, 0, "left", "center"), (-1, 0, "right", "center"),
+            (1, 1, "left", "bottom"), (-1, 1, "right", "bottom"),
+            (1, -1, "left", "top"), (-1, -1, "right", "top"),
+            (0, 1, "center", "bottom"), (0, -1, "center", "top")]
+    radii = [7, 14, 22, 32, 44, 58]
+
+    def overlap(a, b, pad=2 * px):
+        w = min(a[2], b[2]) - max(a[0], b[0]) + pad
+        h = min(a[3], b[3]) - max(a[1], b[1]) + pad
+        return w * h if (w > 0 and h > 0) else 0.0
+
+    placed = []
+    order = sorted(range(len(texts)), key=lambda i: -priority[i])
+    for i in order:
+        best = None
+        for rad in radii:
+            for dx, dy, ha, va in dirs:
+                norm = (dx * dx + dy * dy) ** 0.5
+                off = (dx / norm * rad, dy / norm * rad)
+                ann = ax.annotate(texts[i], (xs[i], ys[i]), xytext=off,
+                                  textcoords="offset points", fontsize=7,
+                                  color=_TEXT, ha=ha, va=va, zorder=5,
+                                  linespacing=1.15)
+                bb = ann.get_window_extent(renderer)
+                box = (bb.x0, bb.y0, bb.x1, bb.y1)
+                outside = (box[0] < ax_box.x0 or box[2] > ax_box.x1 or
+                           box[1] < ax_box.y0 or box[3] > ax_box.y1)
+                cost = (1e9 if outside else 0.0)
+                cost += sum(overlap(box, b) for b in placed)
+                cost += sum(overlap(box, pb) for j, pb in enumerate(point_boxes) if j != i)
+                ann.remove()
+                if best is None or cost < best[0]:
+                    best = (cost, off, ha, va, box, rad)
+                if cost == 0:
+                    break
+            if best and best[0] == 0:
+                break
+        cost, off, ha, va, box, rad = best
+        arrow = (dict(arrowstyle="-", color=_MGRAY, lw=0.6,
+                      shrinkA=1, shrinkB=5) if rad >= 14 else None)
+        ax.annotate(texts[i], (xs[i], ys[i]), xytext=off,
+                    textcoords="offset points", fontsize=7, color=_TEXT,
+                    ha=ha, va=va, zorder=5, linespacing=1.15, arrowprops=arrow)
+        placed.append(box)
+
+
 def build_docx(df, sections, contrarian_rows, report_date, output_path):
     doc = Document()
     set_landscape(doc)
@@ -448,6 +870,30 @@ def build_docx(df, sections, contrarian_rows, report_date, output_path):
     if contrarian_rows:
         add_section_heading(doc, "Contrarian Positioning")
         add_contrarian_table(doc, contrarian_rows)
+
+    # --- Signature Charts (inserted after Contrarian Positioning) ---
+    add_section_heading(doc, "AFG Signature Charts")
+
+    png1 = build_probability_advantage_chart(df)
+    _insert_chart_png(doc, png1, width_inches=6.5,
+                      caption="Chart 1 — Where AFG Sees the Edge  |  "
+                              "AFG Probability vs. Kalshi Implied Probability for all active BUY positions.")
+
+    doc.add_paragraph()  # spacer
+
+    png3 = build_movement_tracker_chart(df)
+    if png3 is not None:
+        _insert_chart_png(doc, png3, width_inches=6.5,
+                          caption="Chart 2 — The Market's Changing Expectations  |  "
+                                  "Solid lines: Kalshi implied probability across Mon/Wed/Fri cycles. "
+                                  "Dotted lines: current AFG estimate.")
+        doc.add_paragraph()  # spacer
+
+    png2 = build_mispricing_matrix_chart(df)
+    _insert_chart_png(doc, png2, width_inches=5.5,
+                      caption="Chart 3 — Mapping the Market's Blind Spots  |  "
+                              "Points above the diagonal: AFG more bullish than Kalshi. "
+                              "Points below: AFG more bearish. Distance from the line = magnitude of disagreement.")
 
     if excluded_note:
         add_section_heading(doc, "Publication Note")
@@ -545,7 +991,7 @@ def build_substack_post(df, sections, report_date, output_path):
       - TOP 3 CALLS, market name + direction ONLY (no edge score, no rationale)
     Edge scores, conviction tiers and reasoning stay in the paid report.
     """
-    top3 = df.head(3)
+    top3 = df[df["recommendation"].str.upper().str.contains("BUY", na=False)].head(3)
     lead = top3.iloc[0]
 
     # Title is authored per cycle in the narrative under "## Substack Title".
@@ -670,9 +1116,17 @@ def main():
     require_approved_files()
     os.makedirs(REPORTS_DIR, exist_ok=True)
 
+    # Auto-log prices for Chart 3 (Probability Movement Tracker).
+    # Runs silently; failure does not block the report.
+    try:
+        import log_prices
+        log_prices.main()
+    except Exception as _lp_err:
+        print(f"[log_prices] warning: {_lp_err}")
+
     df = load_predictions()
     sections, contrarian_rows = parse_narrative()
-    report_date = date.today().strftime("%B %d, %Y")
+    report_date = afg_date(date.today(), with_year=True)
     file_date = date.today().isoformat()
 
     docx_path = f"{REPORTS_DIR}/AFG_Research_Report_{file_date}.docx"
